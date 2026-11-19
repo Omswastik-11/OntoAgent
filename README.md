@@ -29,37 +29,37 @@ OntoAgent bridges quantitative SQL analytics, multi-hop knowledge graph queries,
 
 ```mermaid
 flowchart TD
-    User([Operations Manager / Data Analyst]) --> UI[Gradio Console / REST API / CLI]
-    UI --> Auth[Role-Based Authentication & Guardrails]
+    User(["Operations Manager / Data Analyst"]) --> UI["Gradio Console / REST API / CLI"]
+    UI --> Auth["Role-Based Authentication & Guardrails"]
     
-    subgraph Supervisor [LangGraph Supervisor & Routing Layer]
-        Auth --> Route[Query Router & Subtask Planner]
-        Route --> FanOut{Domain Fan-Out}
+    subgraph Supervisor ["LangGraph Supervisor & Routing Layer"]
+        Auth --> Route["Query Router & Subtask Planner"]
+        Route --> FanOut{"Domain Fan-Out"}
     end
 
-    subgraph Specialists [Specialized Domain Subgraphs]
-        FanOut -->|Relational Queries| SQL[SQL Specialist<br/><i>SQLGlot AST + Auto-Repair</i>]
-        FanOut -->|Topology & Network| Graph[Graph Specialist<br/><i>Cypher AST + Schema Bounds</i>]
-        FanOut -->|Policy & Rules| RAG[RAG Specialist<br/><i>pgvector Hybrid + Injection Quarantine</i>]
+    subgraph Specialists ["Specialized Domain Subgraphs"]
+        FanOut -->|Relational Queries| SQL["SQL Specialist<br/>SQLGlot AST + Auto-Repair"]
+        FanOut -->|Topology & Network| Graph["Graph Specialist<br/>Cypher AST + Schema Bounds"]
+        FanOut -->|Policy & Rules| RAG["RAG Specialist<br/>pgvector Hybrid + Injection Quarantine"]
     end
 
-    subgraph Persistence [Data Tier (Strict Read-Only Enforcement)]
-        SQL -->|ontoagent_ro| PG_RO[(PostgreSQL Analytics)]
-        Graph -->|read-only session| NEO[(Neo4j Knowledge Graph)]
-        RAG -->|ontoagent_kb| PG_KB[(pgvector Policy KB)]
+    subgraph Persistence ["Data Tier - Strict Read-Only Enforcement"]
+        SQL -->|ontoagent_ro| PG_RO[("PostgreSQL Analytics")]
+        Graph -->|read-only session| NEO[("Neo4j Knowledge Graph")]
+        RAG -->|ontoagent_kb| PG_KB[("pgvector Policy KB")]
     end
 
-    Specialists --> Synth[Synthesizer Node<br/><i>Grounded Answer Generation & Citation Anchors</i>]
+    Specialists --> Synth["Synthesizer Node<br/>Grounded Answer Generation & Citation Anchors"]
 
-    subgraph Operations [Operational Action Pipeline]
-        Route -.->|wants_action=True| PolicyEng[Deterministic Policy Engine<br/><i>Decimal Math & Business Tier Rules</i>]
-        PolicyEng --> HITL{{Human-in-the-Loop Gate<br/><i>LangGraph Interrupt</i>}}
-        HITL -->|Approved| Mint[Token Minter<br/><i>HMAC-SHA256 Argument Binding</i>]
-        Mint --> FastMCP[FastMCP Action Server<br/><i>Isolated Subprocess Trust Domain</i>]
-        FastMCP -->|ontoagent_ops| PG_OPS[(PostgreSQL Ops Schema<br/><i>Idempotent Ticket Creation</i>)]
+    subgraph Operations ["Operational Action Pipeline"]
+        Route -.->|wants_action=True| PolicyEng["Deterministic Policy Engine<br/>Decimal Math & Business Tier Rules"]
+        PolicyEng --> HITL{{"Human-in-the-Loop Gate<br/>LangGraph Interrupt"}}
+        HITL -->|Approved| Mint["Token Minter<br/>HMAC-SHA256 Argument Binding"]
+        Mint --> FastMCP["FastMCP Action Server<br/>Isolated Subprocess Trust Domain"]
+        FastMCP -->|ontoagent_ops| PG_OPS[("PostgreSQL Ops Schema<br/>Idempotent Ticket Creation")]
     end
 
-    Synth --> Output([Verified Response & Audit Trace])
+    Synth --> Output(["Verified Response & Audit Trace"])
     FastMCP --> Output
 ```
 

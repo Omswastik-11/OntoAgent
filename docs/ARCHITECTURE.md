@@ -16,35 +16,35 @@ The architecture enforces a strict **separation of concerns**:
 
 ```mermaid
 flowchart TD
-  User([User / Operator]) -->|Web Console or REST API| API[FastAPI / Gradio Orchestrator]
-  API --> TurnInit[init_turn: Token & Time Resolution]
-  TurnInit --> InputGuard[Input Guard: Prompt Injection & Sanitization]
+  User(["User / Operator"]) -->|Web Console or REST API| API["FastAPI / Gradio Orchestrator"]
+  API --> TurnInit["init_turn: Token & Time Resolution"]
+  TurnInit --> InputGuard["Input Guard: Prompt Injection & Sanitization"]
 
-  subgraph OrchestrationGraph [LangGraph StateGraph Core]
-    InputGuard --> Supervisor[Supervisor: Intent & Route Planner]
+  subgraph OrchestrationGraph ["LangGraph StateGraph Core"]
+    InputGuard --> Supervisor["Supervisor: Intent & Route Planner"]
     Supervisor -->|Fan-Out Conditional Edge| Specialists
 
-    subgraph Specialists [Specialist Subgraphs]
-      SQL[SQL Specialist: PostgreSQL Analytics]
-      Graph[Graph Specialist: Neo4j Cypher]
-      RAG[RAG Specialist: pgvector Hybrid KB]
+    subgraph Specialists ["Specialist Subgraphs"]
+      SQL["SQL Specialist: PostgreSQL Analytics"]
+      Graph["Graph Specialist: Neo4j Cypher"]
+      RAG["RAG Specialist: pgvector Hybrid KB"]
     end
 
-    Specialists --> Synthesizer[Synthesizer: Grounded Answer & Citations]
-    Synthesizer --> ActionRouter{Action Requested & Ops Role?}
+    Specialists --> Synthesizer["Synthesizer: Grounded Answer & Citations"]
+    Synthesizer --> ActionRouter{"Action Requested & Ops Role?"}
 
-    ActionRouter -->|No / Analyst Role| Finalize[Finalize & Output Guard]
-    ActionRouter -->|Yes & Ops Role| Planner[Deterministic Action Planner]
+    ActionRouter -->|No / Analyst Role| Finalize["Finalize & Output Guard"]
+    ActionRouter -->|Yes & Ops Role| Planner["Deterministic Action Planner"]
 
-    Planner --> HITL[Human Approval Node: LangGraph Interrupt]
+    Planner --> HITL["Human Approval Node: LangGraph Interrupt"]
   end
 
-  HITL -->|Operator Decides & Narrows| HITLResume{Approved?}
+  HITL -->|Operator Decides & Narrows| HITLResume{"Approved?"}
   HITLResume -->|No| Finalize
-  HITLResume -->|Yes| MCPExec[MCP Executor: Mint HMAC Token]
+  HITLResume -->|Yes| MCPExec["MCP Executor: Mint HMAC Token"]
 
-  MCPExec -->|Stdio JSON-RPC / IPC| MCPServer[MCPServer / FastMCP Process]
-  MCPServer -->|Audit Log & DB Write| PostgresOps[(PostgreSQL ops.* Schema)]
+  MCPExec -->|Stdio JSON-RPC / IPC| MCPServer["MCPServer / FastMCP Process"]
+  MCPServer -->|Audit Log & DB Write| PostgresOps[("PostgreSQL ops.* Schema")]
   MCPServer --> Finalize
 
   Finalize --> API
