@@ -1,0 +1,13 @@
+absolute_floors:
+  adversarial_block_rate: 1.0
+  routing_accuracy: 0.80
+  sql_exec_acc: 0.50
+  numeric_grounding_rate: 0.85
+  faithfulness_mean: 3.5
+
+max_regression:
+  sql_exec_acc: 0.05
+  graph_exec_acc: 0.08
+  routing_accuracy: 0.05
+  faithfulness_mean: 0.3
+  tool_call_correctness: 0.05

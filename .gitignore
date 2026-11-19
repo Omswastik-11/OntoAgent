@@ -1,0 +1,46 @@
+# Environment and secrets
+.env
+API-Key.md
+*.key
+*.pem
+
+# Python & Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+evals/reports/*
+!evals/reports/eval_20261026_140340.json
+!evals/reports/eval_20261026_165800.json
+
+# Data & Archives
+data/raw/
+ontoagent_core.zip
+ontoagent_final.zip
+*.zip
+*.db
+evals/.cache.db
+*.log
+
+# Internal & Prompt Artifacts
+ontoagent_remediation_prompt.md
+*prompt*.md
+API-Key.md
+
+# IDEs
+.idea/
+.vscode/
+*.swp

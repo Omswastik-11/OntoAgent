@@ -1,0 +1,419 @@
+version: 1
+as_of_date: "2018-09-01"
+
+entities:
+  Order:
+    description: "A purchase transaction placed by a customer, possibly with several items and sellers."
+    sql_table: analytics.fct_orders
+    graph_label: Order
+    key: order_id
+    grain: "one row per order"
+    properties:
+      order_id:
+        type: string
+        description: "Unique order id"
+      customer_id:
+        type: string
+        description: "Per-order customer id"
+      customer_unique_id:
+        type: string
+        description: "Canonical person identifier"
+      customer_state:
+        type: string
+        description: "2-letter state code of the customer"
+      customer_region:
+        type: string
+        description: "Region of the customer (North, Northeast, Center-West, Southeast, South)"
+      order_status:
+        type: enum
+        values: [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+        description: "Status of the order"
+      purchase_ts:
+        type: timestamp
+        description: "Timestamp when the order was placed"
+      approved_ts:
+        type: timestamp
+        nullable: true
+        description: "Timestamp of payment approval"
+      carrier_ts:
+        type: timestamp
+        nullable: true
+        description: "Timestamp when the order was handed over to the carrier"
+      delivered_ts:
+        type: timestamp
+        nullable: true
+        description: "Timestamp when order reached customer. NULL if not delivered."
+      estimated_delivery_ts:
+        type: timestamp
+        description: "Promised delivery deadline communicated to customer"
+      purchase_month:
+        type: date
+        description: "First day of purchase month. DEFAULT time dimension for demand/sales questions."
+      delivered_month:
+        type: date
+        nullable: true
+        description: "First day of delivery month. DEFAULT time dimension for delivery-performance questions."
+      is_delivered:
+        type: boolean
+        description: "True if delivered_ts is not null"
+      is_late:
+        type: boolean
+        nullable: true
+        description: "Delivered after estimated date (date comparison). NULL if not delivered."
+      delay_days:
+        type: integer
+        nullable: true
+        description: "Days delivered after estimate; negative means early, NULL if not delivered"
+      transit_days:
+        type: integer
+        nullable: true
+        description: "Carrier delivery duration in days (delivered_ts - carrier_ts)"
+      item_count:
+        type: integer
+        description: "Total number of items in order"
+      items_total:
+        type: decimal
+        unit: BRL
+        description: "Sum of item prices"
+      freight_total:
+        type: decimal
+        unit: BRL
+        description: "Sum of freight charges"
+      order_value:
+        type: decimal
+        unit: BRL
+        description: "Gross order total: items_total + freight_total"
+      payment_total:
+        type: decimal
+        unit: BRL
+        description: "Sum of payment installments"
+
+  OrderItem:
+    description: "An individual product item within an order supplied by a specific seller."
+    sql_table: analytics.fct_order_items
+    grain: "one row per item in an order"
+    properties:
+      order_id:
+        type: string
+        description: "Order identifier"
+      order_item_id:
+        type: integer
+        description: "Sequential line item number within order"
+      product_id:
+        type: string
+        description: "Product identifier"
+      seller_id:
+        type: string
+        description: "Seller identifier"
+      seller_state:
+        type: string
+        description: "2-letter state code of seller"
+      seller_region:
+        type: string
+        description: "Region of seller (North, Northeast, Center-West, Southeast, South)"
+      category_en:
+        type: string
+        nullable: true
+        description: "English category name"
+      category_group:
+        type: string
+        description: "High-level category group (electronics, home_furniture, etc.)"
+      shipping_limit_ts:
+        type: timestamp
+        description: "Seller deadline to hand off item to carrier"
+      carrier_ts:
+        type: timestamp
+        nullable: true
+        description: "Carrier pickup timestamp"
+      price:
+        type: decimal
+        unit: BRL
+        description: "Item price"
+      freight_value:
+        type: decimal
+        unit: BRL
+        description: "Item shipping fee"
+      handoff_late:
+        type: boolean
+        nullable: true
+        description: "True if carrier_ts > shipping_limit_ts. NULL if carrier_ts is NULL."
+      handoff_delay_days:
+        type: integer
+        nullable: true
+        description: "Days between shipping limit date and actual carrier pickup date"
+
+  Seller:
+    description: "A merchant offering items on the marketplace."
+    sql_table: analytics.dim_seller
+    graph_label: Seller
+    key: seller_id
+    grain: "one row per seller"
+    properties:
+      seller_id:
+        type: string
+        description: "Unique seller identifier"
+      seller_city:
+        type: string
+        description: "City where seller operates"
+      seller_state:
+        type: string
+        description: "2-letter state code"
+      seller_region:
+        type: string
+        description: "Region where seller operates"
+
+  Product:
+    description: "A catalog item sold on the platform."
+    sql_table: analytics.dim_product
+    graph_label: Product
+    key: product_id
+    grain: "one row per product"
+    properties:
+      product_id:
+        type: string
+        description: "Unique product identifier"
+      category_pt:
+        type: string
+        nullable: true
+        description: "Original Portuguese category name"
+      category_en:
+        type: string
+        nullable: true
+        description: "Translated English category name"
+      category_group:
+        type: string
+        description: "Broad category group"
+      weight_g:
+        type: integer
+        nullable: true
+        description: "Product weight in grams"
+      photos_qty:
+        type: integer
+        nullable: true
+        description: "Count of photos in listing"
+      name_length:
+        type: integer
+        nullable: true
+        description: "Length of product title"
+      description_length:
+        type: integer
+        nullable: true
+        description: "Length of product description"
+
+  Review:
+    description: "Customer feedback and satisfaction rating for an order."
+    sql_table: analytics.fct_reviews
+    graph_label: Review
+    key: review_id
+    grain: "one row per review and order"
+    properties:
+      review_id:
+        type: string
+        description: "Review identifier"
+      order_id:
+        type: string
+        description: "Order reviewed"
+      review_score:
+        type: integer
+        description: "Rating score from 1 (lowest) to 5 (highest)"
+      comment_title:
+        type: string
+        nullable: true
+        sensitivity: free_text
+        description: "Subject title of review message"
+      comment_message:
+        type: string
+        nullable: true
+        sensitivity: free_text
+        description: "Body text of review feedback"
+      created_ts:
+        type: timestamp
+        description: "Timestamp when review questionnaire was sent"
+      answered_ts:
+        type: timestamp
+        description: "Timestamp when customer completed review"
+
+  Payment:
+    description: "Payment installment or transaction method for an order."
+    sql_table: analytics.fct_payments
+    grain: "one row per payment part"
+    properties:
+      order_id:
+        type: string
+        description: "Order identifier"
+      payment_sequential:
+        type: integer
+        description: "Payment sequence number"
+      payment_type:
+        type: enum
+        values: [credit_card, boleto, voucher, debit_card, not_defined]
+        description: "Method used for payment"
+      installments:
+        type: integer
+        description: "Number of installment installments"
+      payment_value:
+        type: decimal
+        unit: BRL
+        description: "Value of payment installment"
+
+  Customer:
+    description: "The buying customer placing orders on the marketplace."
+    sql_table: analytics.dim_customer
+    graph_label: Customer
+    key: customer_unique_id
+    grain: "one row per customer account"
+    properties:
+      customer_id:
+        type: string
+        description: "Per-order customer token"
+      customer_unique_id:
+        type: string
+        description: "Unique person identifier"
+      city:
+        type: string
+        description: "Customer city"
+      state:
+        type: string
+        description: "Customer 2-letter state code"
+      region:
+        type: string
+        description: "Customer geographic region"
+      email:
+        type: string
+        sensitivity: pii
+        description: "Customer email address"
+      phone:
+        type: string
+        sensitivity: pii
+        description: "Customer phone number"
+      cpf:
+        type: string
+        sensitivity: pii
+        description: "Customer Brazilian tax ID (CPF)"
+
+  StateRegion:
+    description: "Brazilian state code and region mapping."
+    sql_table: analytics.dim_state_region
+    graph_label: State
+    grain: "one row per state"
+    properties:
+      state:
+        type: string
+        description: "2-letter state code"
+      region:
+        type: string
+        description: "Geographic region (North, Northeast, Center-West, Southeast, South)"
+
+  Shipment:
+    description: "Delivery lifecycle of an order (graph only)."
+    graph_label: Shipment
+    key: order_id
+    properties:
+      order_id:
+        type: string
+      is_late:
+        type: boolean
+      delay_days:
+        type: integer
+      transit_days:
+        type: integer
+
+  Category:
+    description: "Product category classification (graph only)."
+    graph_label: Category
+    key: category_en
+    properties:
+      category_en:
+        type: string
+      category_group:
+        type: string
+
+  State:
+    description: "Geographic state jurisdiction (graph only)."
+    graph_label: State
+    key: code
+    properties:
+      code:
+        type: string
+      region:
+        type: string
+
+
+relationships:
+  - name: PLACED
+    from: Customer
+    to: Order
+    cardinality: one_to_many
+  - name: CONTAINS
+    from: Order
+    to: Product
+    cardinality: many_to_many
+    properties: [price, freight_value, item_seq, seller_id]
+  - name: FULFILLS
+    from: Seller
+    to: Order
+    cardinality: many_to_many
+    description: "Seller supplied at least one item of the order"
+  - name: SOLD
+    from: Seller
+    to: Product
+    cardinality: many_to_many
+    properties: [units, order_count]
+    derived: true
+  - name: HAS_REVIEW
+    from: Order
+    to: Review
+    cardinality: one_to_many
+  - name: SHIPPED_AS
+    from: Order
+    to: Shipment
+    cardinality: one_to_one
+  - name: IN_CATEGORY
+    from: Product
+    to: Category
+    cardinality: many_to_one
+  - name: LOCATED_IN
+    from: [Customer, Seller]
+    to: State
+    cardinality: many_to_one
+
+metrics:
+  late_rate:
+    description: "Share of delivered orders delivered after the estimated date."
+    sql: "AVG(is_late::int)"
+    table: analytics.fct_orders
+    default_time_dimension: delivered_month
+  handoff_late_rate:
+    description: "Share of items handed to the carrier after the seller shipping limit."
+    sql: "AVG(handoff_late::int)"
+    table: analytics.fct_order_items
+  gmv:
+    description: "Gross merchandise value: SUM(items_total) for non-canceled orders."
+    sql: "SUM(items_total)"
+    table: analytics.fct_orders
+  avg_review_score:
+    description: "Average customer rating score."
+    sql: "AVG(review_score)"
+    table: analytics.fct_reviews
+
+glossary:
+  - term: ["late", "delayed", "overdue"]
+    resolves_to: "is_late = TRUE"
+  - term: ["southeast", "south-east"]
+    resolves_to: "region = 'Southeast'"
+    applies_to: [seller_region, customer_region]
+  - term: ["electronics", "electronic", "tech"]
+    resolves_to: "category_group = 'electronics'"
+  - term: ["seller region", "electronics sellers in <region>"]
+    resolves_to: "fct_order_items.seller_region"
+    note: "Region refers to the SELLER's location unless question specifies customer/buyer."
+  - term: ["handoff", "dispatch"]
+    resolves_to: "handoff_late / handoff_delay_days (seller phase)"
+  - term: ["transit", "carrier delay"]
+    resolves_to: "transit_days (carrier phase: delivered_ts - carrier_ts)"
+
+join_pitfalls:
+  - "fct_orders JOIN fct_order_items multiplies order-level measures (order_value, items_total, freight_total) by item count. Use COUNT(DISTINCT order_id), or aggregate items first in a CTE."
+  - "fct_orders JOIN fct_payments likewise fans out. Use payment_total on fct_orders instead of joining payments unless payment_type is needed."
+  - "An order can have several reviews and several sellers. Use COUNT(DISTINCT ...) accordingly."
+  - "is_late is NULL for undelivered orders. Filter is_delivered when computing rates over orders; AVG ignores NULL automatically."

@@ -1,0 +1,36 @@
+roles:
+  analyst:
+    allowed_tables:
+      - analytics.fct_orders
+      - analytics.fct_order_items
+      - analytics.dim_seller
+      - analytics.dim_product
+      - analytics.dim_state_region
+      - analytics.fct_payments
+      - analytics.fct_reviews
+    denied_columns:
+      - analytics.fct_reviews.comment_title
+      - analytics.fct_reviews.comment_message
+    row_level: aggregate_only
+    can_propose_actions: false
+
+  ops_manager:
+    allowed_tables:
+      - analytics.fct_orders
+      - analytics.fct_order_items
+      - analytics.dim_seller
+      - analytics.dim_product
+      - analytics.dim_state_region
+      - analytics.fct_payments
+      - analytics.fct_reviews
+      - analytics.dim_customer
+    denied_columns:
+      - analytics.dim_customer.email
+      - analytics.dim_customer.phone
+      - analytics.dim_customer.cpf
+    row_level: full
+    can_propose_actions: true
+
+masking:
+  customer_ids: pseudonymize
+  free_text: scan_and_mask

@@ -1,0 +1,131 @@
+examples:
+  - id: sql_ex_01
+    intent: "Count total sellers by region"
+    instruction: "How many sellers are located in each Brazilian region?"
+    sql: |
+      SELECT seller_region, COUNT(*) AS seller_count
+      FROM analytics.dim_seller
+      GROUP BY seller_region
+      ORDER BY seller_count DESC;
+
+  - id: sql_ex_02
+    intent: "Average freight value by product category group"
+    instruction: "What is the average freight fee paid per item across category groups?"
+    sql: |
+      SELECT category_group, ROUND(AVG(freight_value), 2) AS avg_freight
+      FROM analytics.fct_order_items
+      GROUP BY category_group
+      ORDER BY avg_freight DESC;
+
+  - id: sql_ex_03
+    intent: "Monthly GMV trend for 2017"
+    instruction: "Show total order revenue by purchase month throughout 2017"
+    sql: |
+      SELECT purchase_month, SUM(order_value) AS total_gmv
+      FROM analytics.fct_orders
+      WHERE order_status NOT IN ('canceled', 'unavailable')
+        AND purchase_month BETWEEN '2017-01-01' AND '2017-12-01'
+      GROUP BY purchase_month
+      ORDER BY purchase_month ASC;
+
+  - id: sql_ex_04
+    intent: "Payment type distribution"
+    instruction: "What proportion of payments were made using credit card versus boleto?"
+    sql: |
+      SELECT payment_type, COUNT(*) AS transaction_count, ROUND(SUM(payment_value), 2) AS total_amount
+      FROM analytics.fct_payments
+      GROUP BY payment_type
+      ORDER BY transaction_count DESC;
+
+  - id: sql_ex_05
+    intent: "Sellers with largest product catalog variety"
+    instruction: "Which 10 sellers offer items across the highest number of distinct product categories?"
+    sql: |
+      SELECT i.seller_id, COUNT(DISTINCT i.category_group) AS category_diversity
+      FROM analytics.fct_order_items i
+      GROUP BY i.seller_id
+      ORDER BY category_diversity DESC, i.seller_id ASC
+      LIMIT 10;
+
+  - id: sql_ex_06
+    intent: "Average transit duration from SP sellers to RJ customers"
+    instruction: "What was the average carrier transit time for orders shipped from sellers in SP to buyers in RJ?"
+    sql: |
+      SELECT ROUND(AVG(o.transit_days), 1) AS avg_transit_days
+      FROM analytics.fct_orders o
+      JOIN analytics.fct_order_items i ON o.order_id = i.order_id
+      WHERE o.is_delivered
+        AND i.seller_state = 'SP'
+        AND o.customer_state = 'RJ'
+        AND o.transit_days IS NOT NULL;
+
+  - id: sql_ex_07
+    intent: "Review score breakdown for multi-item orders"
+    instruction: "Compare the average customer review score for orders with 1 item versus orders with more than 1 item"
+    sql: |
+      SELECT 
+        CASE WHEN item_count = 1 THEN 'Single-item' ELSE 'Multi-item' END AS order_type,
+        ROUND(AVG(r.review_score), 2) AS avg_review_score
+      FROM analytics.fct_orders o
+      JOIN analytics.fct_reviews r ON o.order_id = r.order_id
+      WHERE o.is_delivered
+      GROUP BY CASE WHEN item_count = 1 THEN 'Single-item' ELSE 'Multi-item' END;
+
+  - id: sql_ex_08
+    intent: "Top 5 cities by order volume in South region"
+    instruction: "List top 5 buyer cities in the South region by total delivered orders"
+    sql: |
+      SELECT c.city, COUNT(DISTINCT o.order_id) AS order_count
+      FROM analytics.fct_orders o
+      JOIN analytics.dim_customer c ON o.customer_unique_id = c.customer_unique_id
+      WHERE o.is_delivered AND o.customer_region = 'South'
+      GROUP BY c.city
+      ORDER BY order_count DESC
+      LIMIT 5;
+
+  - id: sql_ex_09
+    intent: "Seller on-time dispatch rate by state in Center-West"
+    instruction: "For sellers in the Center-West, what percentage of order items were dispatched on time?"
+    sql: |
+      SELECT seller_state, 
+             COUNT(*) AS total_items,
+             ROUND(100.0 * (1.0 - AVG(handoff_late::int)), 1) AS on_time_handoff_pct
+      FROM analytics.fct_order_items
+      WHERE seller_region = 'Center-West' AND handoff_late IS NOT NULL
+      GROUP BY seller_state
+      ORDER BY on_time_handoff_pct DESC;
+
+  - id: sql_ex_10
+    intent: "Orders with delayed delivery but on-time seller handoff"
+    instruction: "In July 2018, how many orders were delivered late even though the seller dispatched the item on time?"
+    sql: |
+      WITH on_time_handoff_orders AS (
+        SELECT order_id
+        FROM analytics.fct_order_items
+        GROUP BY order_id
+        HAVING BOOL_AND(handoff_late = FALSE)
+      )
+      SELECT COUNT(DISTINCT o.order_id) AS carrier_delayed_orders
+      FROM analytics.fct_orders o
+      JOIN on_time_handoff_orders h ON o.order_id = h.order_id
+      WHERE o.is_delivered 
+        AND o.delivered_month = '2018-07-01'
+        AND o.is_late = TRUE;
+
+  - id: sql_ex_11
+    intent: "Distribution of installment counts for high-value orders"
+    instruction: "What is the average number of installments for orders over R$ 1000?"
+    sql: |
+      SELECT ROUND(AVG(p.installments), 1) AS avg_installments
+      FROM analytics.fct_payments p
+      JOIN analytics.fct_orders o ON p.order_id = o.order_id
+      WHERE o.order_value > 1000.00;
+
+  - id: sql_ex_12
+    intent: "Delivered order volume in Q1 2018"
+    instruction: "How many delivered orders were completed in the first quarter of 2018?"
+    sql: |
+      SELECT COUNT(*) AS total_orders
+      FROM analytics.fct_orders
+      WHERE is_delivered 
+        AND delivered_month BETWEEN '2018-01-01' AND '2018-03-01';

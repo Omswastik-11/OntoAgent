@@ -1,0 +1,30 @@
+version: "2026-01"
+title: "Refund and Compensation Policy"
+
+tiers:
+  LATE_7:
+    min_delay_days: 7
+    max_delay_days: 14
+    freight_pct: 1.00
+    item_pct: 0.00
+    description: "Delivered 7 to 14 days late: 100% freight compensation"
+  LATE_15:
+    min_delay_days: 15
+    max_delay_days: null
+    freight_pct: 1.00
+    item_pct: 0.20
+    description: "Delivered 15+ days late: 100% freight plus 20% item value"
+
+caps:
+  goodwill_cap: 150.00
+  escalation_order_value_threshold: 500.00
+  batch_max_orders: 25
+  batch_max_amount: 2000.00
+
+undelivered:
+  min_days_past_estimate: 10
+  refund_type: "full"
+  cap_applicable: false
+
+ineligible_statuses:
+  - canceled

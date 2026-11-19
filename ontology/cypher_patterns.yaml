@@ -1,0 +1,76 @@
+patterns:
+  - id: pattern_01
+    name: "Seller review clusters"
+    intent: "Identify sellers associated with a high volume of negative reviews"
+    example_question: "Find sellers with more than 15 low ratings (score <= 2) and their average score."
+    cypher: |
+      MATCH (s:Seller)-[:FULFILLS]->(o:Order)-[:HAS_REVIEW]->(r:Review)
+      WHERE r.score <= 2
+      WITH s, count(r) AS low_review_count, avg(r.score) AS avg_low_score
+      WHERE low_review_count > 15
+      RETURN s.seller_id AS seller_id, low_review_count, round(avg_low_score, 2) AS avg_score
+      ORDER BY low_review_count DESC
+      LIMIT 10;
+
+  - id: pattern_02
+    name: "Co-purchased products"
+    intent: "Find products frequently purchased together in the same order"
+    example_question: "Which products are most frequently co-ordered with product $prod_id?"
+    cypher: |
+      MATCH (p1:Product {product_id: $prod_id})<-[:CONTAINS]-(o:Order)-[:CONTAINS]->(p2:Product)
+      WHERE p1 <> p2
+      RETURN p2.product_id AS related_product_id, count(DISTINCT o) AS times_co_purchased
+      ORDER BY times_co_purchased DESC
+      LIMIT 5;
+
+  - id: pattern_03
+    name: "Repeat-late customers"
+    intent: "Customers who experienced multiple late deliveries across distinct orders"
+    example_question: "Find customers who experienced 3 or more late deliveries."
+    cypher: |
+      MATCH (c:Customer)-[:PLACED]->(o:Order)-[:SHIPPED_AS]->(sh:Shipment)
+      WHERE sh.is_late = true
+      WITH c, count(DISTINCT o) AS late_order_count
+      WHERE late_order_count >= 3
+      RETURN c.customer_unique_id AS customer_id, late_order_count
+      ORDER BY late_order_count DESC
+      LIMIT 10;
+
+  - id: pattern_04
+    name: "Sellers sharing customers"
+    intent: "Find pairs of sellers fulfilling orders for the same individual customer"
+    example_question: "Find pairs of sellers that frequently fulfill orders for the same customer."
+    cypher: |
+      MATCH (s1:Seller)-[:FULFILLS]->(o1:Order)<-[:PLACED]-(c:Customer)-[:PLACED]->(o2:Order)<-[:FULFILLS]-(s2:Seller)
+      WHERE s1.seller_id < s2.seller_id
+      WITH s1, s2, count(DISTINCT c) AS shared_customers
+      WHERE shared_customers >= 5
+      RETURN s1.seller_id AS seller_1, s2.seller_id AS seller_2, shared_customers
+      ORDER BY shared_customers DESC
+      LIMIT 10;
+
+  - id: pattern_05
+    name: "Seller to category to late-rate path"
+    intent: "Trace seller performance within a given product category"
+    example_question: "For sellers in electronics, what is the proportion of late shipments?"
+    cypher: |
+      MATCH (s:Seller)-[:FULFILLS]->(o:Order)-[:CONTAINS]->(p:Product)-[:IN_CATEGORY]->(cat:Category {category_group: 'electronics'})
+      MATCH (o)-[:SHIPPED_AS]->(sh:Shipment)
+      WITH s, count(DISTINCT o) AS total_orders, sum(CASE WHEN sh.is_late = true THEN 1 ELSE 0 END) AS late_orders
+      WHERE total_orders >= 10
+      RETURN s.seller_id AS seller_id, total_orders, late_orders, round(100.0 * late_orders / total_orders, 1) AS late_pct
+      ORDER BY late_pct DESC
+      LIMIT 10;
+
+  - id: pattern_06
+    name: "Region-to-region fulfilment flows"
+    intent: "Analyze cross-regional flows from seller state to customer region"
+    example_question: "What is the shipment volume and late rate from SP sellers to Northeast customers?"
+    cypher: |
+      MATCH (s:Seller)-[:LOCATED_IN]->(st:State {code: 'SP'})
+      MATCH (s)-[:FULFILLS]->(o:Order)-[:SHIPPED_AS]->(sh:Shipment)
+      MATCH (c:Customer)-[:PLACED]->(o)
+      WHERE c.region = 'Northeast'
+      RETURN count(o) AS total_orders,
+             sum(CASE WHEN sh.is_late = true THEN 1 ELSE 0 END) AS late_orders,
+             round(100.0 * sum(CASE WHEN sh.is_late = true THEN 1 ELSE 0 END) / count(o), 1) AS late_pct;
