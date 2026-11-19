@@ -1,4 +1,4 @@
-"""Gradio interactive operations console for OntoAgent (SPEC § 16).
+"""Gradio interactive operations console for OntoAgent.
 
 Purpose:
     Provides an enterprise web UI featuring persona switching (Analyst vs Ops Manager),

@@ -24,6 +24,10 @@ MAX_REFUND_PER_ORDER = Decimal("1000.00")
 ALLOWED_REASON_CODES = {"LATE_7", "LATE_15", "UNDELIVERED_10"}
 ALLOWED_TEMPLATES = {"sla_warning", "sla_probation", "late_handoff_notice"}
 
+# In-memory storage for offline testing
+_OFFLINE_USED_TOKENS: set = set()
+
+
 
 def get_ops_db_url() -> str:
     """Return database URL with ontoagent_ops credentials."""
@@ -136,6 +140,23 @@ async def create_refund_ticket(
             "ok": False,
             "error_code": "INVALID_REASON_CODE",
             "message": f"Reason code '{reason_code}' is not in allowed set: {ALLOWED_REASON_CODES}",
+        }
+
+    # Offline fixtures / in-memory mode for standalone testing
+    if os.environ.get("ONTOAGENT_OFFLINE_FIXTURES") == "1":
+        if jti in _OFFLINE_USED_TOKENS:
+            return {
+                "ok": False,
+                "error_code": "TOKEN_REPLAYED",
+                "message": f"Approval token jti '{jti}' has already been consumed",
+            }
+        _OFFLINE_USED_TOKENS.add(jti)
+        return {
+            "ok": True,
+            "ticket_id": f"mock_tkt_{uuid.uuid4().hex[:8]}",
+            "status": "created",
+            "amount": f"{dec_amount:.2f}",
+            "created": True,
         }
 
     # 4. Database checks and atomic transaction
@@ -287,6 +308,22 @@ async def notify_seller_templated(
             return {"ok": False, "error_code": "PARAM_TOO_LONG", "message": f"Param '{k}' exceeds 80 characters"}
         if "http://" in v.lower() or "https://" in v.lower():
             return {"ok": False, "error_code": "URL_NOT_PERMITTED", "message": f"Param '{k}' contains forbidden URL"}
+
+    # Offline fixtures / in-memory mode for standalone testing
+    if os.environ.get("ONTOAGENT_OFFLINE_FIXTURES") == "1":
+        if jti in _OFFLINE_USED_TOKENS:
+            return {
+                "ok": False,
+                "error_code": "TOKEN_REPLAYED",
+                "message": f"Approval token jti '{jti}' has already been consumed",
+            }
+        _OFFLINE_USED_TOKENS.add(jti)
+        return {
+            "ok": True,
+            "notification_id": f"mock_notif_{uuid.uuid4().hex[:8]}",
+            "status": "queued",
+            "created": True,
+        }
 
     # 4. Atomic database transaction
     db_url = get_ops_db_url()

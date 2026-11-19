@@ -1,4 +1,4 @@
-"""OntoAgent Automated Evaluation Runner (SPEC §§ 13 & 14).
+"""OntoAgent Automated Evaluation Runner.
 
 Purpose:
     Executes benchmark questions from evals/golden.jsonl across SQL, Graph, RAG,

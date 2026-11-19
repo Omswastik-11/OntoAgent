@@ -94,7 +94,7 @@ def compute_compensation(
 ) -> RefundDecision:
     """Pure, deterministic evaluation of compensation for a single order.
 
-    Rules from SPEC §10.1 & policies/refund_policy.yaml:
+    Rules from policies/refund_policy.yaml:
         - Ineligible statuses (e.g. canceled): 0 refund.
         - Open ticket exists: 0 refund.
         - Delivered orders:
@@ -249,7 +249,7 @@ def decide_refund(
     f: OrderFacts,
     policy: Optional[Dict[str, Any]] = None,
 ) -> RefundDecision:
-    """Alias for compute_compensation per SPEC §10.1 naming convention."""
+    """Alias for compute_compensation per policy engine specification."""
     return compute_compensation(f, policy)
 
 

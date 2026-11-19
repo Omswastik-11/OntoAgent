@@ -46,7 +46,7 @@
 
 ## Offline Verification vs. Live Evaluation Modes
 
-Following the remediation audit, all hardcoded benchmark responses were removed from `FakeChatModel` in `src/ontoagent/llm.py` to ensure that offline tests and benchmarks never game evaluation numbers:
+The benchmark suite supports two distinct execution modes to decouple automated offline continuous integration smoke tests from live multi-agent model evaluation:
 
 | Evaluation Mode | Model Provider | Routing Accuracy | Action Accuracy | Adversarial Block Rate | SQL / Graph Execution | Overall Accuracy | Report Artifact |
 |---|---|---|---|---|---|---|---|

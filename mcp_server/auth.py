@@ -1,7 +1,7 @@
 """Cryptographic HMAC approval token verification for MCP Server.
 
 Purpose:
-    Maintains independent verification logic within the MCP Server trust domain (SPEC §10.3).
+    Maintains independent verification logic within the isolated MCP Server trust domain.
     Ensures zero coupling or import dependency from the main application package.
     Enforces tool binding, canonical argument digest, and token expiration.
 """

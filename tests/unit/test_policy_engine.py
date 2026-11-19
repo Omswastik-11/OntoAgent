@@ -1,4 +1,4 @@
-"""Unit tests for the deterministic compensation policy engine (SPEC §10.1).
+"""Unit tests for the deterministic compensation policy engine.
 
 Verifies exact mathematical compliance, tier boundary edge cases, goodwill caps,
 escalation thresholds, batch capping, and deduplication.

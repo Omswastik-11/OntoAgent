@@ -80,7 +80,7 @@ def input_guard(state: AgentState) -> Dict[str, Any]:
     """Validate query length, empty input, and scan for prompt injection heuristics."""
     question = state.get("question", "")
 
-    # Bug B4: empty question must route to refuse/clarify, not supervisor
+    # Empty question must route to clarify, not supervisor
     if not question or not question.strip():
         return {
             "question": "",
@@ -196,7 +196,7 @@ Return a valid RoutePlan."""
         elif role != "ops_manager" or "USER_INJECTION_HARD" in risk_flags:
             plan_dict["wants_action"] = False
     except Exception as e:
-        # Bug B3: log error, append to state['errors'], degrade explicitly with SUPERVISOR_FALLBACK
+        # Fallback handling: log error, append to state errors, degrade explicitly with SUPERVISOR_FALLBACK
         logger.warning("Supervisor LLM failed: %s; degrading to single SQL subtask fallback", str(e))
         plan_dict = {
             "decision": "answer",
@@ -462,7 +462,7 @@ Format your response in exactly these sections:
         if has_fixture_data and "FIXTURE DATA" not in final_answer:
             final_answer = "**FIXTURE DATA**\n\n" + final_answer
     except Exception as e:
-        # Bug B3: log error, append to state['errors'], degrade explicitly with SYNTHESIZER_FALLBACK
+        # Fallback handling: log error, append to state errors, degrade explicitly with SYNTHESIZER_FALLBACK
         logger.warning("Synthesizer LLM failed: %s; degrading to fallback summary", str(e))
         errors_to_add.append(f"Synthesizer LLM error: {str(e)}")
         flags_to_add.append("SYNTHESIZER_FALLBACK")

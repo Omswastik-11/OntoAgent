@@ -1,4 +1,4 @@
-"""Pydantic schemas for the OntoAgent REST API (SPEC §§ 14 & 15).
+"""Pydantic schemas for the OntoAgent REST API.
 
 Purpose:
     Defines request, response, approval, and audit models for API communication.

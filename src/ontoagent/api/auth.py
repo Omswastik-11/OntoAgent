@@ -1,4 +1,4 @@
-"""API key authentication and role mapping middleware (SPEC §§ 14 & 15).
+"""API key authentication and role mapping middleware.
 
 Purpose:
     Validates X-API-Key against configured keys, associates actor_id and role

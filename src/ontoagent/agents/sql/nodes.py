@@ -110,7 +110,7 @@ async def run_sql_instruction(
             resp = await llm.ainvoke(messages)
             raw_content = extract_text_content(resp.content if hasattr(resp, "content") else resp)
         except Exception as e:
-            # Fail closed on LLM error (Bug B1: never substitute fallback query)
+            # Fail closed on LLM error: never substitute unverified fallback query
             logger.error("SQL generation LLM call failed: %s", str(e))
             return SqlStepResult(
                 ok=False,
@@ -152,7 +152,7 @@ async def run_sql_instruction(
         except Exception as e:
             db_err = str(e)
 
-            # Explicit offline fixture support (Bug B1)
+            # Explicit offline fixture support for standalone testing
             if os.environ.get("ONTOAGENT_OFFLINE_FIXTURES") == "1":
                 logger.info("ONTOAGENT_OFFLINE_FIXTURES=1 active; loading labelled fixture rows")
                 rows = [
@@ -174,7 +174,7 @@ async def run_sql_instruction(
                 db_err = None
                 break
 
-            # Fail closed on DB connection failure (Bug B1: never fabricate rows)
+            # Fail closed on DB connection failure: never fabricate rows
             if any(w in db_err.lower() for w in ("connection", "connect", "timeout", "refused", "offline", "authentication failed", "no module named")):
                 logger.warning("Database unavailable (%s); failing closed without fabricated rows", db_err)
                 return SqlStepResult(
@@ -201,10 +201,10 @@ async def run_sql_instruction(
             elapsed_ms=int((time.time() - start_time) * 1000),
         )
 
-    # 4. Digest results and candidate IDs (Bug B6)
+    # 4. Digest results and extract candidate order IDs
     columns = list(rows[0].keys()) if rows else []
 
-    # B6: candidate_ids must come from the executed query's unmasked order_id column ONLY when it exists
+    # Candidate IDs must come from the executed query's unmasked order_id column ONLY when it exists
     candidate_ids: List[str] = []
     if rows and "order_id" in columns:
         candidate_ids = [

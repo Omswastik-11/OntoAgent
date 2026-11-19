@@ -187,6 +187,9 @@ async def run_graph_instruction(
         except Exception as e:
             db_err = str(e)
             logger.warning("Neo4j execution error on attempt %d: %s", attempts, db_err)
+            if any(w in db_err.lower() for w in ("connection", "connect", "timeout", "refused", "offline", "unreachable")):
+                logger.warning("Neo4j unreachable (%s); stopping repair loop", db_err)
+                break
             if attempts > max_repairs:
                 break
 

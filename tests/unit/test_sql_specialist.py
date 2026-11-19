@@ -1,4 +1,4 @@
-"""Unit tests for the SQL specialist subgraph and Bug B1/B6 invariants."""
+"""Unit tests for the SQL specialist subgraph and fail-closed query execution."""
 
 import pytest
 from ontoagent.agents.sql.nodes import run_sql_instruction
@@ -95,7 +95,7 @@ async def test_repair_exhaustion(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_db_unavailable_fails_closed_no_fabricated_rows(monkeypatch):
-    """Verify Bug B1: when DB is down and fixtures not requested, fail closed with DB_UNAVAILABLE and no fake rows."""
+    """Verify that when database is down and fixtures not requested, execution fails closed with DB_UNAVAILABLE and empty rows."""
     fake_model = FakeChatModel()
     fake_model.responses = ["```sql\nSELECT order_id FROM analytics.fct_orders LIMIT 10;\n```"]
 
@@ -118,7 +118,7 @@ async def test_db_unavailable_fails_closed_no_fabricated_rows(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_offline_fixtures_explicitly_flagged(monkeypatch):
-    """Verify Bug B1: ONTOAGENT_OFFLINE_FIXTURES=1 loads clearly labelled fixture rows with _fixture: True."""
+    """Verify ONTOAGENT_OFFLINE_FIXTURES=1 loads clearly labelled fixture rows with _fixture: True."""
     fake_model = FakeChatModel()
     fake_model.responses = ["```sql\nSELECT order_id FROM analytics.fct_orders LIMIT 10;\n```"]
 
@@ -140,7 +140,7 @@ async def test_offline_fixtures_explicitly_flagged(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_candidate_ids_only_from_unmasked_order_id_column(monkeypatch):
-    """Verify Bug B6: candidate_ids extracted ONLY when order_id is in query columns, never from masked rows."""
+    """Verify candidate_ids are extracted ONLY when order_id is in query columns, never from masked rows."""
     fake_model = FakeChatModel()
     fake_model.responses = ["```sql\nSELECT delivered_month, COUNT(*) FROM analytics.fct_orders GROUP BY 1;\n```"]
 

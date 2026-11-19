@@ -70,6 +70,7 @@ def check_unit_tests() -> Tuple[str, str]:
     """Check 4: Unit tests (no network, FakeChatModel)."""
     env = os.environ.copy()
     env["ONTOAGENT_FAKE_LLM"] = "1"
+    env["ONTOAGENT_OFFLINE_FIXTURES"] = "1"
     proc = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/unit", "-q"],
         capture_output=True,

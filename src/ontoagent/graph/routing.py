@@ -61,7 +61,7 @@ def fan_out(state: AgentState) -> List[str]:
 def after_synthesizer(state: AgentState) -> Literal["action_planner", "finalize"]:
     """Route after synthesizer: evaluate whether operational action planning should run.
 
-    Invariant (SPEC §10.2):
+    Invariant (Operational Action Routing Gate):
         action_planner only runs if:
             1. plan.wants_action is True
             2. user_role == "ops_manager" (Analyst role NEVER reaches planner)

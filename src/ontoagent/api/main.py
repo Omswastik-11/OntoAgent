@@ -1,4 +1,4 @@
-"""FastAPI service implementation for OntoAgent (SPEC §§ 14 & 15).
+"""FastAPI service implementation for OntoAgent.
 
 Purpose:
     Exposes REST endpoints for health checks, role-governed ontology queries,

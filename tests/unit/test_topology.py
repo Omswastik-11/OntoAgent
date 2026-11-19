@@ -18,6 +18,7 @@ async def test_graph_builder_compiles():
 async def test_fan_out_runs_synthesizer_exactly_once(monkeypatch):
     """Verify that compound SQL + RAG query executes both specialists and runs synthesizer once."""
     monkeypatch.setenv("ONTOAGENT_FAKE_LLM", "1")
+    monkeypatch.setenv("ONTOAGENT_OFFLINE_FIXTURES", "1")
 
     # Mock FakeChatModel to return a compound RoutePlan
     compound_plan = RoutePlan(
@@ -104,6 +105,7 @@ async def test_oversized_query_routes_directly_to_refuse(monkeypatch):
 async def test_fan_out_routes_to_graph_specialist(monkeypatch):
     """Verify that graph specialist subtask routes to graph_specialist_node and populates graph_result."""
     monkeypatch.setenv("ONTOAGENT_FAKE_LLM", "1")
+    monkeypatch.setenv("ONTOAGENT_OFFLINE_FIXTURES", "1")
 
     graph_plan = RoutePlan(
         decision="answer",

@@ -50,7 +50,7 @@ async def run_rag_instruction(instruction: str) -> RagResult:
     # 1. Embed query
     query_vec = embed_text(instruction)
 
-    # 2. Retrieve chunks: try PostgreSQL pgvector first (Bug B5)
+    # 2. Retrieve chunks: try PostgreSQL pgvector first with fallback
     raw_chunks: List[Dict[str, Any]] = []
     used_db = False
 
@@ -140,7 +140,7 @@ async def run_rag_instruction(instruction: str) -> RagResult:
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
         raw_chunks = [item[1] for item in scored_chunks[:5]]
 
-    # 3. Scan and filter (Bug B7: filter quarantined chunks, wrap delimiters)
+    # 3. Scan and filter: exclude quarantined chunks and wrap in untrusted data delimiters
     final_chunks: List[RagChunk] = []
     citations: List[str] = []
     quarantined_count = 0

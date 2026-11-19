@@ -1,4 +1,4 @@
-"""Unit and integration tests for the OntoAgent Action Path (SPEC §§ 10 & 11).
+"""Unit and integration tests for the OntoAgent operational action pipeline.
 
 Tests:
     1. Full action pipeline: plan -> interrupt -> approve -> mint token -> MCP execution.
@@ -128,8 +128,9 @@ async def test_mcp_server_token_validation_and_tamper_defense():
 
 
 @pytest.mark.asyncio
-async def test_mcp_server_token_replay_rejected():
+async def test_mcp_server_token_replay_rejected(monkeypatch):
     """Single-use jti prevents token replay attacks (Threat T9)."""
+    monkeypatch.setenv("ONTOAGENT_OFFLINE_FIXTURES", "1")
     idemp_key = str(uuid.uuid4())
     tool_args = {
         "order_id": "ord_replay_01",

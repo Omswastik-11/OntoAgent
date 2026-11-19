@@ -1,58 +1,164 @@
 # OntoAgent
 
-**Ontology-grounded multi-agent copilot for enterprise operations data**
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/orchestration-LangGraph%20v0.2+-orange.svg)](https://github.com/langchain-ai/langgraph)
+[![FastMCP](https://img.shields.io/badge/protocol-FastMCP-purple.svg)](https://github.com/jlowin/fastmcp)
+[![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL%2016%20%2B%20pgvector-336791.svg)](https://www.postgresql.org/)
+[![Neo4j](https://img.shields.io/badge/graph-Neo4j%205.x-008CC1.svg)](https://neo4j.com/)
+[![Security](https://img.shields.io/badge/security-HMAC%20Bound%20%7C%20Fail--Closed-success.svg)](docs/SECURITY.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-OntoAgent is a production-grade multi-agent operations copilot built for e-commerce operations managers and data analysts. It bridges quantitative SQL queries, multi-hop knowledge graph patterns, and natural language policy documents into grounded, verifiable answers and safe, policy-compliant compensation actions. OntoAgent enforces strict defense-in-depth: the ontology drives prompts, validators, and permissions; queries are validated by code before execution; no LLM holds side-effecting authority; and all actions require human approval and cryptographic HMAC token verification.
+> **Enterprise-grade, ontology-grounded multi-agent copilot for e-commerce operations data, conversational analytics, and cryptographically verified action execution.**
+
+OntoAgent bridges quantitative SQL analytics, multi-hop knowledge graph queries, and natural language policy retrieval into verifiable answers and safe, policy-compliant operational actions. Designed for e-commerce operations managers and data analysts, OntoAgent enforces strict defense-in-depth: the domain ontology drives prompts, validators, and permissions; queries are validated by code before execution; no LLM holds direct write privileges; and all operational actions require human approval with cryptographic HMAC token verification.
+
+---
+
+## Key Highlights
+
+- **Multi-Agent Orchestration**: LangGraph supervisor dynamically routes natural language queries across specialized subgraphs (SQL, Neo4j Graph, and pgvector RAG).
+- **Ontology as Single Source of Truth**: Unified domain models (`ontology/ontology.yaml`) standardize business metrics, table grains, join paths, and semantic definitions.
+- **Fail-Closed Security Invariants**: SQLGlot AST rewriting and Cypher statement validation enforce strict read-only execution, column-level RBAC, and boundary isolation.
+- **Deterministic Policy Engine**: Computes SLA compensation using exact `Decimal` arithmetic, eliminating hallucinated payouts and guaranteeing idempotency.
+- **Cryptographic Action Gating**: Action proposals require human approval that mints an HMAC-SHA256 bound, single-use token verified independently by an isolated FastMCP server.
+- **Auditable & Resilient**: Full state persistence, token replay prevention, automated query repair loops, and PII anonymization.
 
 ---
 
 ## Architecture Overview
 
 ```mermaid
-flowchart LR
-  UI[Gradio UI / CLI] -->|HTTP + API Key| API[FastAPI Orchestrator]
-  API --> G[LangGraph Supervisor]
-  G --> SQLA[SQL Specialist Subgraph]
-  G --> GRA[Graph Specialist Subgraph]
-  G --> RAGA[RAG Specialist Subgraph]
-  SQLA --> PGRO[(PostgreSQL - Read-Only Role)]
-  GRA --> NEO[(Neo4j - Read-Only Cypher)]
-  RAGA --> PGV[(PostgreSQL pgvector - Policy Chunks)]
-  G --> PLAN[Deterministic Action Planner]
-  PLAN --> HITL{{Human-in-the-Loop Approval}}
-  HITL --> EXE[MCP Action Executor]
-  EXE -->|HMAC Signed Token| MCP[FastMCP Server]
-  MCP --> PGOPS[(PostgreSQL Ops Schema)]
+flowchart TD
+    User([Operations Manager / Data Analyst]) --> UI[Gradio Console / REST API / CLI]
+    UI --> Auth[Role-Based Authentication & Guardrails]
+    
+    subgraph Supervisor [LangGraph Supervisor & Routing Layer]
+        Auth --> Route[Query Router & Subtask Planner]
+        Route --> FanOut{Domain Fan-Out}
+    end
+
+    subgraph Specialists [Specialized Domain Subgraphs]
+        FanOut -->|Relational Queries| SQL[SQL Specialist<br/><i>SQLGlot AST + Auto-Repair</i>]
+        FanOut -->|Topology & Network| Graph[Graph Specialist<br/><i>Cypher AST + Schema Bounds</i>]
+        FanOut -->|Policy & Rules| RAG[RAG Specialist<br/><i>pgvector Hybrid + Injection Quarantine</i>]
+    end
+
+    subgraph Persistence [Data Tier (Strict Read-Only Enforcement)]
+        SQL -->|ontoagent_ro| PG_RO[(PostgreSQL Analytics)]
+        Graph -->|read-only session| NEO[(Neo4j Knowledge Graph)]
+        RAG -->|ontoagent_kb| PG_KB[(pgvector Policy KB)]
+    end
+
+    Specialists --> Synth[Synthesizer Node<br/><i>Grounded Answer Generation & Citation Anchors</i>]
+
+    subgraph Operations [Operational Action Pipeline]
+        Route -.->|wants_action=True| PolicyEng[Deterministic Policy Engine<br/><i>Decimal Math & Business Tier Rules</i>]
+        PolicyEng --> HITL{{Human-in-the-Loop Gate<br/><i>LangGraph Interrupt</i>}}
+        HITL -->|Approved| Mint[Token Minter<br/><i>HMAC-SHA256 Argument Binding</i>]
+        Mint --> FastMCP[FastMCP Action Server<br/><i>Isolated Subprocess Trust Domain</i>]
+        FastMCP -->|ontoagent_ops| PG_OPS[(PostgreSQL Ops Schema<br/><i>Idempotent Ticket Creation</i>)]
+    end
+
+    Synth --> Output([Verified Response & Audit Trace])
+    FastMCP --> Output
 ```
+
+---
+
+## Enterprise Core Capabilities
+
+### 1. Unified Domain Ontology & Grain Resolution
+Unlike naive text-to-SQL systems that expose raw table schemas, OntoAgent relies on a single source of truth (`ontology/ontology.yaml`). The ontology formalizes:
+- **Entity Grain & Relationships**: Explicitly maps primary keys, foreign keys, and fan-out hazards (e.g., distinguishing order-level summaries from line-item details).
+- **Standardized Business Metrics**: Strict formulas for delivery delay, freight ratios, customer review scores, and cancellation rates.
+- **Category Taxonomy**: Standardizes multi-lingual category classifications into consistent operational groupings.
+
+### 2. Multi-Engine Domain Specialization
+OntoAgent orchestrates three distinct analytical engines in parallel or sequence:
+- **SQL Specialist**: Translates analytical queries into dialect-compliant PostgreSQL queries using few-shot retrieval, AST semantic validation, and automated syntax repair.
+- **Neo4j Graph Specialist**: Resolves complex topological questions (co-purchasing networks, multi-seller fulfillment, customer fraud clusters) via validated Cypher patterns.
+- **RAG Specialist**: Performs hybrid search combining full-text search (`ts_rank_cd`) and dense vector similarity (`pgvector`) with automated quarantine scanning for indirect prompt injections.
+
+### 3. Fail-Closed Security & AST Gatekeeping
+OntoAgent guarantees that untrusted user inputs cannot manipulate data or breach boundaries:
+- **SQLGlot AST Validator**: Forbids DDL, DML, file operations, system tables, comment injection, and unauthorized table joins. Automatically injects row limits (`LIMIT 1000`).
+- **Cypher AST Validator**: Disallows mutating operations (`CREATE`, `MERGE`, `DELETE`, `SET`, `DROP`) and restricts relationship traversal to authorized schema types.
+- **Role-Based Access Control (RBAC)**: Enforces table- and column-level allowlists based on caller identity (`analyst` vs. `ops_manager`).
+- **PII Anonymization**: Synthesizes and masks sensitive identifiers (customer names, emails, phones) at data boundary layers.
+
+### 4. Deterministic Compensation Policy Engine
+Financial transactions must never depend on non-deterministic LLM arithmetic:
+- The policy engine implements compensation tiers (e.g., delay > 7 days = 20% refund, delay > 15 days = 50% refund, undelivered > 10 days = 100% refund).
+- Arithmetic is executed strictly using Python's standard `Decimal` library to eliminate floating-point rounding discrepancies.
+- Implements goodwill compensation limits, per-order caps (R$ 1,000.00), and batch-level ceilings (R$ 10,000.00).
+
+### 5. FastMCP Architecture & Cryptographic Token Binding
+Action execution adheres to the Model Context Protocol (MCP) using FastMCP with cryptographic verification:
+- **Air-Gapped Authority**: The LLM never holds write or side-effecting tools. It can only propose actions.
+- **HMAC-SHA256 Token Binding**: The human-in-the-loop approval step issues an HMAC-signed token bound to the exact payload (`tool`, `order_id`, `amount`, `idempotency_key`, `approver`, `thread_id`).
+- **Replay Protection**: The FastMCP server verifies token authenticity, re-validates refund amounts against business rules, and records single-use token identifiers (`jti`) in an audit log to prevent replay attacks.
+
+---
+
+## Empirical Benchmark & Accuracy Metrics
+
+OntoAgent is continuously benchmarked against a 40-item golden evaluation dataset (`evals/golden.jsonl`) encompassing complex analytical joins, multi-hop graph traversals, policy inquiries, operational refund requests, and adversarial prompt injection attacks.
+
+| Benchmark Category | Metric | Measured Result | Production Target | Status |
+|---|---|---|---|---|
+| **System Reliability** | End-to-End Pass Rate | **95.0%** (38/40) | ≥ 70.0% | **PASS** |
+| **Intent Classification** | Supervisor Routing Accuracy | **100.0%** (40/40) | ≥ 80.0% | **PASS** |
+| **Query Correctness** | SQL Specialist Accuracy | **100.0%** (16/16) | ≥ 80.0% | **PASS** |
+| **Graph Traversal** | Neo4j Cypher Accuracy | **100.0%** (8/8) | ≥ 70.0% | **PASS** |
+| **Policy Retrieval** | RAG Specialist Retrieval | **75.0%** (6/8) | ≥ 70.0% | **PASS** |
+| **Operational Safety** | Action Pipeline Execution | **100.0%** (4/4) | ≥ 80.0% | **PASS** |
+| **Adversarial Defenses** | Attack Quarantine / Block Rate | **100.0%** (4/4 blocked) | 100.0% | **PASS** |
+| **Latency Profile** | Execution Latency (p50 / p95) | **122.5 ms / 208.5 ms** | ≤ 2,500 ms / 5,000 ms | **PASS** |
+
+*Complete benchmark breakdown and per-test audit traces are available in [docs/RESULTS.md](docs/RESULTS.md).*
 
 ---
 
 ## Quickstart
 
 ### 1. Prerequisites
-- Python 3.11+
-- Docker & Docker Compose (optional for live database services)
+- **Python**: 3.11 or higher
+- **Docker & Docker Compose** (optional for running local PostgreSQL 16 and Neo4j 5.x instances)
 
 ### 2. Setup Virtual Environment
 ```bash
+# Clone the repository
+git clone https://github.com/Omswastik-11/OntoAgent.git
+cd OntoAgent
+
+# Create and activate virtual environment
 python -m venv .venv
 # On Windows:
 .venv\Scripts\activate
 # On Linux/macOS:
 source .venv/bin/activate
+
+# Install package and dependencies in editable mode
 pip install -e .
 ```
 
-### 3. Configure Environment
-Copy the example environment file and configure your keys:
+### 3. Environment Configuration
+Copy the sample environment file and provide your API keys:
 ```bash
 cp .env.example .env
 ```
-Add your `GOOGLE_API_KEY`, `GEMINI_API_KEY`, or `GROQ_API_KEY` in `.env`.
+Supported LLM backends:
+- **Google Gemini**: Set `GEMINI_API_KEY` (default model: `gemini-2.5-flash`)
+- **Groq**: Set `GROQ_API_KEY` (default model: `llama-3.3-70b-versatile`)
+- **Offline / Mock Mode**: Set `ONTOAGENT_FAKE_LLM=1` for testing without API keys.
 
-### 4. Ingest and Build Data Pipeline
-Run the consolidated data build pipeline to load raw CSVs, compute analytics models, mint synthetic PII, and populate the Neo4j graph:
+### 4. Build Data Pipeline & Storage Services
+Start the containerized databases and run the consolidated ingestion pipeline:
 ```bash
+# Start PostgreSQL (analytics & pgvector) and Neo4j
+docker compose up -d
+
+# Run data ingestion pipeline (load CSVs, mint synthetic PII, build Neo4j graph)
 # On Linux / macOS:
 make data-build
 
@@ -60,131 +166,103 @@ make data-build
 .\make.bat data-build
 ```
 
-### 5. Verify System
-Run the canonical verification suite:
+### 5. Run Verification Suite
+Run the canonical verification test suite:
 ```bash
-# Full verification (services, data, unit tests, adversarial, e2e smoke):
+# Full verification (services, data consistency, unit tests, adversarial security, e2e smoke):
 python scripts/verify.py
-# Or fast offline verification:
+
+# Rapid offline verification (no Docker required):
 python scripts/verify.py --fast
 # Or using make:
 make verify-fast
 ```
 
-### 6. Interactive Terminal CLI
-Start a multi-turn chat session directly in your terminal:
+### 6. Interactive Interfaces
+
+#### Gradio Operations Console (Web UI)
+Launch the full web console featuring role switching (`analyst` vs. `ops_manager`), conversational analytics, query inspection, and human-in-the-loop action approval:
+```bash
+python -m ontoagent.ui.app
+```
+Access the console at [http://localhost:7860](http://localhost:7860).
+
+#### FastAPI REST Server
+Launch the REST orchestrator providing API endpoints for `/v1/health`, `/v1/ontology`, `/v1/chat`, and `/v1/threads/{thread_id}/approval`:
+```bash
+uvicorn ontoagent.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Interactive OpenAPI documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+#### Terminal Chat CLI
+Run a multi-turn chat session directly in your shell:
 ```bash
 python -m ontoagent.cli
 ```
 
-### 7. Run the FastAPI REST Server
-Launch the REST orchestrator providing `/v1/health`, `/v1/ontology`, `/v1/chat`, and `/v1/threads/{thread_id}/approval`:
-```bash
-uvicorn ontoagent.api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 8. Run the Gradio Web Console
-Launch the interactive operations web console featuring persona switching and human-in-the-loop approvals:
-```bash
-python -m ontoagent.ui.app
-```
-Open [http://localhost:7860](http://localhost:7860) in your browser.
-
 ---
 
-## Job Description (JD) Traceability
+## Technical Documentation
 
-| JD Requirement | Where Satisfied in Codebase | Talking Point |
-|---|---|---|
-| Agentic architectures, memory, tool use | `src/ontoagent/graph/builder.py`, `nodes.py` | Supervisor routes across subgraphs with MemorySaver multi-turn state persistence. |
-| MCP and tool-integration patterns | `mcp_server/`, `src/ontoagent/guards/approval_token.py` | FastMCP server with HMAC token authorization and server-side validation. |
-| Context engineering & prompting | `src/ontoagent/ontology/prompt_builder.py` | Role-filtered prompts, grain pitfalls, and glossary facts derived from ontology. |
-| Ontology-first design & entity resolution | `ontology/ontology.yaml`, `src/ontoagent/ontology/` | Single ontology contract drives prompts, validators, and `customer_unique_id` resolution. |
-| Knowledge graphs | `ontology/cypher_patterns.yaml`, `src/ontoagent/guards/cypher_validator.py` | Neo4j multi-hop traversal with FULFILLS relationships and AST validation. |
-| Vector databases & retrieval | `src/ontoagent/data/ingest_kb.py`, `src/ontoagent/agents/rag/` | Dense embeddings with injection scanning and strict delimiter encapsulation. |
-| Guardrails & security | `src/ontoagent/guards/` | Multi-tier defenses: SQL/Cypher AST validators, PII masking, and approval tokens. |
-| Evaluation & regression gates | `scripts/verify.py`, `evals/` | Deterministic verification table, golden eval sets, and ablation profiles. |
-
----
-
-## Evaluation & Real Benchmark Results
-
-Benchmark results are produced directly by the automated eval runner (`evals/eval_runner.py`) executing against the 40-item golden benchmark (`evals/golden.jsonl`). **Zero numbers are fabricated.**
-
-| Benchmark Metric | Measured Score | Standard Threshold | Status |
-|---|---|---|---|
-| **Overall Pass Rate** | **95.0%** (38/40) | ≥ 70.0% | **PASS** |
-| **Routing Accuracy** | **100.0%** (40/40) | ≥ 80.0% | **PASS** |
-| **Execution Accuracy** | **95.0%** (38/40) | ≥ 70.0% | **PASS** |
-| **Adversarial Attack Block Rate** | **100.0%** (4/4 blocked) | 100.0% | **PASS** |
-| **SQL Specialist Accuracy** | **100.0%** (16/16) | ≥ 80.0% | **PASS** |
-| **Graph Specialist Accuracy** | **100.0%** (8/8) | ≥ 70.0% | **PASS** |
-| **Action Pipeline Accuracy** | **100.0%** (4/4) | ≥ 80.0% | **PASS** |
-| **RAG Policy Retrieval Accuracy** | **75.0%** (6/8) | ≥ 70.0% | **PASS** |
-| **Latency p50 / p95** | **122.5 ms / 208.5 ms** | ≤ 2,500 ms / 5,000 ms | **PASS** |
-
-*Full audit report and individual item breakdown available in [docs/RESULTS.md](docs/RESULTS.md) and `evals/reports/`.*
-
----
-
-## Documentation Links
-
-- [System Architecture](docs/ARCHITECTURE.md): Subgraphs, specialist flows, data pipeline, and state persistence.
-- [Security Model](docs/SECURITY.md): Threat matrix (T1–T12), AST validators, PII redactions, and HMAC approval tokens.
-- [Operational Runbook](docs/RUNBOOK.md): Deployment, health checks, incident response, and troubleshooting procedures.
-- [Architecture Decision Records (ADRs)](docs/DECISIONS.md): Key engineering trade-offs and rationale.
-- [Evaluation Results](docs/RESULTS.md): Detailed accuracy reports and benchmark methodology.
+- **[System Architecture](docs/ARCHITECTURE.md)**: Deep dive into StateGraph topology, specialist node lifecycle, data contracts, and state persistence.
+- **[Security Architecture & Threat Model](docs/SECURITY.md)**: Formal threat analysis (Threats T1–T12), AST gatekeeper specifications, PII redactions, and HMAC cryptographic token validation.
+- **[Operational Runbook](docs/RUNBOOK.md)**: Production deployment instructions, container health monitoring, incident mitigation, and disaster recovery workflows.
+- **[Architecture Decision Records (ADRs)](docs/DECISIONS.md)**: Architectural rationales, engineering trade-offs, and governance decisions.
+- **[Benchmark Evaluation Audit](docs/RESULTS.md)**: Evaluation methodology, rubric scoring, and execution analysis across all test categories.
 
 ---
 
 ## Repository Tour
 
 ```
-ontoagent/
+OntoAgent/
 ├── Makefile                     # Make automation targets (data-build, verify, test)
 ├── make.bat                     # Windows make wrapper
-├── pyproject.toml               # Package dependencies & configuration
-├── .env.example                 # Environment variable templates
+├── pyproject.toml               # Package dependencies & build configuration
+├── .env.example                 # Environment configuration template
 ├── ontology/                    # Domain ontology and few-shot patterns
-│   ├── ontology.yaml            # Single source of truth for domain data
+│   ├── ontology.yaml            # Single source of truth for business data & semantics
 │   ├── category_groups.yaml     # Standardized category groupings
-│   ├── sql_examples.yaml        # Disjoint few-shot SQL examples
-│   └── cypher_patterns.yaml     # Parameterized graph patterns
+│   ├── sql_examples.yaml        # Disjoint few-shot SQL query patterns
+│   └── cypher_patterns.yaml     # Parameterized Neo4j graph patterns
 ├── policies/                    # RBAC and business policies
-│   ├── rbac.yaml                # Role-based table/column allowlists
+│   ├── rbac.yaml                # Role-based table and column allowlists
 │   ├── refund_policy.yaml       # Machine-readable compensation rules
 │   └── docs/                    # Human-readable policy documents
-├── src/ontoagent/               # Application source
-│   ├── api/                     # FastAPI service, schemas, and auth middleware
+├── src/ontoagent/               # Application source code
+│   ├── api/                     # FastAPI orchestrator, schemas, and auth middleware
 │   ├── ui/                      # Gradio interactive operations console
 │   ├── config.py                # Pydantic v2 settings & feature flags
-│   ├── llm.py                   # LLM factory (Gemini, Groq, FakeChatModel)
+│   ├── llm.py                   # LLM provider factory (Gemini, Groq, FakeChatModel)
 │   ├── ontology/                # Schema models, loaders, and prompt builders
-│   ├── guards/                  # AST validators, PII masking, HMAC tokens
+│   ├── guards/                  # AST validators, PII anonymizer, HMAC approval tokens
 │   ├── actions/                 # Deterministic policy engine & action planner
-│   ├── agents/                  # SQL, Graph, RAG, and Supervisor subgraphs
-│   │   ├── sql/                 # SQL specialist & query execution
-│   │   ├── graph/               # Neo4j Cypher specialist & repair loop
-│   │   ├── rag/                 # Vector embeddings & hybrid retrieval
-│   │   └── supervisor/          # Route planning & subtask decomposition
-│   ├── data/                    # Ingestion: load_postgres, load_neo4j, ingest_kb
-│   ├── graph/                   # LangGraph state, nodes, routing, builder
-│   └── cli.py                   # Terminal interactive chat
-├── mcp_server/                  # MCPServer subprocess and audit logger
+│   ├── agents/                  # Domain-specific subgraphs (SQL, Graph, RAG, Supervisor)
+│   ├── data/                    # Ingestion pipelines (load_postgres, load_neo4j, ingest_kb)
+│   ├── graph/                   # LangGraph state, nodes, routing, and builder
+│   └── cli.py                   # Terminal interactive chat interface
+├── mcp_server/                  # FastMCP server trust domain & audit logging
 ├── scripts/
 │   ├── check_env.py             # Third-party library API introspection
 │   └── verify.py                # Canonical PASS/FAIL verification runner
-├── tests/                       # Unit and adversarial test suites
-└── docs/                        # Architecture, Security, Runbook, and Decisions
+├── tests/
+│   ├── unit/                    # Fast unit tests for all components
+│   └── adversarial/             # Security tests (SQLi, Cypher injection, prompt attacks)
+├── evals/                       # Evaluation framework & 40-item golden benchmark
+└── docs/                        # Architecture, Security, Runbook, Decisions, and Results
 ```
 
 ---
 
-## Limitations
+## Operational Guarantees & Constraints
 
-- **Dataset Recency**: The Brazilian Olist e-commerce dataset covers historical transactions (2016–2018). All relative date expressions resolve relative to the configured `AS_OF_DATE` (default `2018-09-01`).
-- **Role Isolation**: Only `ops_manager` users are authorized to propose and approve compensation actions. Requests by `analyst` users are strictly read-only.
-- **Fail-Closed Execution**: If live PostgreSQL or Neo4j databases are unreachable, queries fail closed without fabricating mock rows. When `ONTOAGENT_OFFLINE_FIXTURES=1` is explicitly set, mock data is clearly badged with `**FIXTURE DATA**`.
-- **Templated Communications**: Seller notifications are restricted to deterministic, approved templates (`late_apology`, `seller_probation_warning`) to eliminate data exfiltration risks.
+- **Historical Time Context**: The Brazilian Olist e-commerce dataset reflects historical operations (2016–2018). All relative time queries (e.g. "last quarter", "recent months") resolve relative to the configurable `AS_OF_DATE` (default `2018-09-01`).
+- **Role Isolation**: Only `ops_manager` users are permitted to propose or approve financial actions. Analyst users operate in strict read-only mode.
+- **Fail-Closed Execution**: If databases or external dependencies are unreachable, queries fail closed without fabricating synthetic records. Offline fixtures are only utilized when `ONTOAGENT_OFFLINE_FIXTURES=1` is explicitly configured.
+- **Communication Security**: Seller notifications are restricted to deterministic, pre-approved templates (`late_apology`, `seller_probation_warning`) to eliminate data exfiltration risks.
 
+---
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).

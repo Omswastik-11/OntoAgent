@@ -24,7 +24,7 @@ def _sync_execute_ro_query(
     import psycopg
     from psycopg.rows import dict_row
 
-    with psycopg.connect(conn_url, row_factory=dict_row) as conn:
+    with psycopg.connect(conn_url, row_factory=dict_row, connect_timeout=3) as conn:
         with conn.cursor() as cur:
             cur.execute(f"SET LOCAL statement_timeout = '{int(timeout_s * 1000)}ms'")
             cur.execute(sql, params)

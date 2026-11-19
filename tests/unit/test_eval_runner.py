@@ -1,4 +1,4 @@
-"""Unit tests for the evaluation runner (SPEC §13).
+"""Unit tests for the evaluation runner.
 
 Verifies that evals/eval_runner.py executes offline without network or service crashes
 using FakeChatModel.
