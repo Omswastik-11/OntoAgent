@@ -254,7 +254,12 @@ def create_ui() -> gr.Blocks:
         )
 
         with gr.Tabs():
-            with gr.Tab("💬 Operations Copilot"):
+            with gr.Tab("💬 Copilot Chat"):
+                gr.Markdown(
+                    """<div style="background-color: #f0f7ff; border: 1px solid #cce3fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
+                    <strong>💡 New to OntoAgent?</strong> If you want to know how to use the system, explore user roles (<strong>Analyst (Read-Only)</strong> vs <strong>Operations Manager (Action-Authorized)</strong>), understand the multi-modal database architecture, or find sample queries to test, please visit the <strong>🧭 Guide & Playbook</strong> tab.
+                    </div>"""
+                )
                 with gr.Row():
                     with gr.Column(scale=3):
                         with gr.Row():
@@ -380,7 +385,7 @@ def create_ui() -> gr.Blocks:
                     outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
                 )
 
-            with gr.Tab("🧭 Project Guide & Query Playbook"):
+            with gr.Tab("🧭 Guide & Playbook"):
                 gr.Markdown(
                     """## 🧭 OntoAgent Architectural Guide & Query Playbook
 Complete reference to understanding user roles, security guardrails, multi-modal database architecture, sample queries, and navigation workflows."""
@@ -409,7 +414,7 @@ Complete reference to understanding user roles, security guardrails, multi-modal
                         outputs=[playbook_content_box],
                     )
 
-            with gr.Tab("🗄️ Database Schema & Ontology Explorer"):
+            with gr.Tab("🗄️ Database Schema"):
                 gr.Markdown(
                     """## 📚 Enterprise Data Model & Ontology Explorer
 Inspect the underlying PostgreSQL relational tables (`analytics` schema), Neo4j knowledge graph topology, canonical business metric formulas, and category groupings. Use the search bar below to quickly find any table, column, or metric."""
@@ -473,7 +478,7 @@ Inspect the underlying PostgreSQL relational tables (`analytics` schema), Neo4j 
                     outputs=[schema_search_input, search_output_box],
                 )
 
-            with gr.Tab("📜 SLA & Compensation Policies"):
+            with gr.Tab("📜 SLA Policies"):
                 gr.Markdown(
                     """## 📜 Operational SLA & Compensation Rules
 Standard compensation rules for customer delivery delays and undelivered orders on the marketplace.

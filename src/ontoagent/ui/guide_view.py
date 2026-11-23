@@ -6,7 +6,7 @@ Purpose:
     and step-by-step navigation instructions.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 # Sample queries catalog categorized by modality and specialist
 QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
@@ -14,30 +14,30 @@ QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
         {
             "query": "Compare the average review score of late versus on-time delivered orders.",
             "role": "Analyst or Operations Manager",
-            "specialist": "SQL Specialist (`analytics` star schema)",
+            "specialist": "SQL Specialist (analytics star schema)",
             "description": "Computes customer satisfaction delta between orders delivered on schedule versus those delayed past the estimated date.",
-            "tables": "`fct_orders`, `fct_reviews`",
+            "tables": "fct_orders, fct_reviews",
         },
         {
             "query": "What is the late delivery rate and average delay days by Brazilian state?",
             "role": "Analyst or Operations Manager",
             "specialist": "SQL Specialist",
-            "description": "Aggregates delivery performance metrics grouped by customer state (`dim_state_region`), highlighting regional logistical bottlenecks.",
-            "tables": "`fct_orders`, `dim_state_region`",
+            "description": "Aggregates delivery performance metrics grouped by customer state (dim_state_region), highlighting regional logistical bottlenecks.",
+            "tables": "fct_orders, dim_state_region",
         },
         {
             "query": "Calculate total GMV and average order value for the top 5 product categories in 2018.",
             "role": "Analyst or Operations Manager",
             "specialist": "SQL Specialist",
             "description": "Performs multi-table join between orders, order items, and products to aggregate financial GMV and AOV across product categories.",
-            "tables": "`fct_orders`, `fct_order_items`, `dim_product`",
+            "tables": "fct_orders, fct_order_items, dim_product",
         },
         {
             "query": "Which sellers in São Paulo (SP) have the highest carrier handoff delay?",
             "role": "Analyst or Operations Manager",
             "specialist": "SQL Specialist",
-            "description": "Calculates `handoff_late_rate` and days between order approval and carrier handoff for sellers located in SP.",
-            "tables": "`fct_order_items`, `dim_seller`",
+            "description": "Calculates handoff_late_rate and days between order approval and carrier handoff for sellers located in SP.",
+            "tables": "fct_order_items, dim_seller",
         },
     ],
     "🕸️ Knowledge Graph (Neo4j)": [
@@ -45,14 +45,14 @@ QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
             "query": "Find sellers who share products across multiple categories and have orders with negative reviews.",
             "role": "Analyst or Operations Manager",
             "specialist": "Graph Specialist (Cypher Traversal)",
-            "description": "Traverses `(:Seller)-[:SOLD]->(:OrderItem)-[:IN_CATEGORY]->(:Category)` and `(:OrderItem)-[:HAS_REVIEW]->(:Review)` to spot cross-category sellers with low satisfaction.",
+            "description": "Traverses (:Seller)-[:SOLD]->(:OrderItem)-[:IN_CATEGORY]->(:Category) and (:OrderItem)-[:HAS_REVIEW]->(:Review) to spot cross-category sellers with low satisfaction.",
             "tables": "Neo4j Knowledge Graph",
         },
         {
             "query": "Which customers have placed orders fulfilled by more than two distinct sellers in the same order?",
             "role": "Analyst or Operations Manager",
             "specialist": "Graph Specialist",
-            "description": "Multi-hop graph query detecting multi-seller split-fulfillment orders: `(:Customer)-[:PLACED]->(:Order)-[:CONTAINS]->(:OrderItem)-[:FULFILLS]->(:Seller)`.",
+            "description": "Multi-hop graph query detecting multi-seller split-fulfillment orders: (:Customer)-[:PLACED]->(:Order)-[:CONTAINS]->(:OrderItem)-[:FULFILLS]->(:Seller).",
             "tables": "Neo4j Knowledge Graph",
         },
         {
@@ -75,7 +75,7 @@ QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
             "query": "What is the approved customer communication template for delayed orders?",
             "role": "Analyst or Operations Manager",
             "specialist": "Policy RAG Specialist",
-            "description": "Surfaces official communication boundaries and pre-approved customer notification templates (`late_apology`).",
+            "description": "Surfaces official communication boundaries and pre-approved customer notification templates (late_apology).",
             "tables": "Policy Store",
         },
         {
@@ -92,14 +92,14 @@ QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
             "role": "Operations Manager (Action-Authorized)",
             "specialist": "Action Proposer + Deterministic Policy Engine",
             "description": "Finds candidate delayed orders, applies Tier LATE_15 policy (50% item price, capped at R$ 1,000), halts at Human-in-the-Loop gate, and awaits operator approval.",
-            "tables": "`fct_orders`, Policy Engine, FastMCP",
+            "tables": "fct_orders, Policy Engine, FastMCP",
         },
         {
             "query": "Identify undelivered orders delayed over 10 days past estimate and propose compensation batch.",
             "role": "Operations Manager (Action-Authorized)",
             "specialist": "Action Proposer + Policy Engine",
             "description": "Applies Tier UNDELIVERED_10 (100% item price + 100% freight) and stages batch for one-click operator confirmation.",
-            "tables": "`fct_orders`, Policy Engine, FastMCP",
+            "tables": "fct_orders, Policy Engine, FastMCP",
         },
         {
             "query": "Please issue a full refund for order e481f51cbdc50e4277241dd3877479c2.",
@@ -115,14 +115,14 @@ QUERY_CATALOG: Dict[str, List[Dict[str, str]]] = {
             "role": "Analyst or Operations Manager",
             "specialist": "Schema Synthesis Context",
             "description": "Outputs a high-level overview of the relational star schema, key constraints, table grains, and one-to-many relationship dynamics.",
-            "tables": "`analytics` schema",
+            "tables": "analytics schema",
         },
         {
             "query": "What canonical business metrics are defined in the ontology and how is late_rate computed?",
             "role": "Analyst or Operations Manager",
             "specialist": "Ontology & Metrics Catalog",
-            "description": "Explains the exact mathematical formulation of `late_rate`, `handoff_late_rate`, and `gmv` defined in the canonical ontology.",
-            "tables": "`ontology.yaml`",
+            "description": "Explains the exact mathematical formulation of late_rate, handoff_late_rate, and gmv defined in the canonical ontology.",
+            "tables": "ontology.yaml",
         },
     ],
 }
@@ -140,9 +140,7 @@ COPILOT_STARTER_EXAMPLES = [
 
 def get_roles_markdown() -> str:
     """Generate comprehensive documentation on user personas, permissions, and guardrails."""
-    return """## 👥 Project Roles & Security Architecture
-
-OntoAgent implements **Role-Based Access Control (RBAC)** and **Deterministic Execution Boundaries** to guarantee that autonomous AI agents cannot execute unauthorized state modifications or financial transfers.
+    return """OntoAgent implements **Role-Based Access Control (RBAC)** and **Deterministic Execution Boundaries** to guarantee that autonomous AI agents cannot execute unauthorized state modifications or financial transfers.
 
 ---
 
@@ -181,24 +179,40 @@ OntoAgent implements **Role-Based Access Control (RBAC)** and **Deterministic Ex
 
 def get_database_architecture_markdown() -> str:
     """Generate documentation explaining the multi-modal database stack."""
-    return """## 🗄️ Multi-Modal Database Architecture
+    return """OntoAgent unifies three distinct storage paradigms to handle complex enterprise e-commerce operational intelligence:
 
-OntoAgent unifies three distinct storage paradigms to handle complex enterprise e-commerce operational intelligence:
-
-```mermaid
-flowchart LR
-    User["User Query"] --> Sup["LangGraph Supervisor"]
-    Sup --> SQLSpecialist["📊 SQL Specialist"]
-    Sup --> GraphSpecialist["🕸️ Graph Specialist"]
-    Sup --> PolicySpecialist["📜 Policy Specialist"]
-    Sup --> ActionProposer["🛡️ Action Proposer"]
-
-    SQLSpecialist --> PG[("PostgreSQL 16\\nanalytics schema")]
-    GraphSpecialist --> Neo4j[("Neo4j 5.x\\nKnowledge Graph")]
-    PolicySpecialist --> Vector[("pgvector / Chroma\\nPolicy Docs")]
-    ActionProposer --> PolicyEngine["Deterministic Policy Engine"]
-    PolicyEngine --> HITL{"Human Approval Gate"}
-    HITL -->|Approve| FastMCP["FastMCP Action Server"]
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                         USER QUERY                                          │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                         LANGGRAPH SUPERVISOR (Routing & Subtask Plan)                       │
+└──────────────┬───────────────────────────────┼───────────────────────────────┬──────────────┘
+               │                               │                               │
+               ▼                               ▼                               ▼
+┌───────────────────────────────┐ ┌───────────────────────────┐ ┌─────────────────────────────┐
+│       📊 SQL Specialist       │ │    🕸️ Graph Specialist     │ │    📜 Policy Specialist     │
+│   PostgreSQL 16 Analytics DB  │ │  Neo4j 5.x Knowledge Graph│ │  pgvector Knowledge Base    │
+│   Star Schema (8 Fact/Dims)   │ │  Multi-Hop Supply Chain   │ │  SLAs & Communication Rules │
+└───────────────────────────────┘ └───────────────────────────┘ └─────────────────────────────┘
+                                               │
+                                               ▼ (When Action Proposed)
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                 DETERMINISTIC POLICY ENGINE (SLA Rules, Tiers & Financial Caps)             │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│               🛡️ HUMAN-IN-THE-LOOP APPROVAL GATE (LangGraph Execution Pause)                │
+│                   Operator reviews proposed order batch and compensation sum                │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ (On "Approve Batch")
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                 FastMCP ACTION SERVER (Cryptographic Single-Use HMAC Token)                 │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -210,7 +224,7 @@ flowchart LR
   - `analytics.fct_orders`: Grain: 1 row per order (order status, timestamps, carrier handoff, delay flag, delivery date).
   - `analytics.fct_order_items`: Grain: 1 row per order item (price, freight, seller, product).
   - `analytics.dim_seller`: Seller metadata, zip code, state, regional cluster.
-  - `analytics.dim_product`: Product dimensions, weight, dimensions, Brazilian category name.
+  - `analytics.dim_product`: Product dimensions, weight, Brazilian category name.
   - `analytics.fct_reviews`: Customer satisfaction scores (1-5), review comments, timestamps.
   - `analytics.fct_payments`: Payment method (credit card, boleto, voucher), installments, sequential value.
   - `analytics.dim_customer`: Customer unique identifier, zip prefix, city, state.
@@ -244,47 +258,52 @@ flowchart LR
 
 def get_navigation_guide_markdown() -> str:
     """Generate step-by-step UI navigation and user flow guide."""
-    return """## 🧭 How to Navigate the OntoAgent System
+    return """Follow this operational workflow to test and navigate the OntoAgent platform:
 
-Follow this step-by-step workflow to explore the system's capabilities:
-
-```mermaid
-flowchart TD
-    A["1. Select Persona\\n(Analyst vs Ops Manager)"] --> B["2. Submit Query\\nor pick from Playbook"]
-    B --> C["3. View Response\\n& Inspect Trace Drawer"]
-    C --> D{"Requires Action?"}
-    D -->|Yes| E["4. Review Batch in HITL Card\\n(Candidate orders & total)"]
-    E --> F["5. Click 'Approve Batch'\\nExecutes via FastMCP"]
-    D -->|No| G["Explore Schema Tab\\nor Policy Rules"]
+```text
+[ Step 1: Select Persona ] ──▶ [ Step 2: Submit Query / Examples ] ──▶ [ Step 3: Inspect Trace Drawer ]
+ (Analyst vs Ops Manager)        (Input Box or Starter Queries)           (SQL, Cypher & Policy RAG)
+                                                                                       │
+                                                  ┌────────────────────────────────────┴────────────────────────────────────┐
+                                                  ▼                                                                         ▼
+                                        [ Analytical Query ]                                                      [ Operational Action ]
+                                                  │                                                                         │
+                                     Synthesized Direct Response                                                LangGraph Pauses Execution
+                                       with Factual Citations                                                               │
+                                                                                                                 [ Step 4: Review Approval Card ]
+                                                                                                                  (Candidate count & R$ total)
+                                                                                                                            │
+                                                                                                                 [ Step 5: Click Approve / Reject ]
+                                                                                                                  (Mints HMAC Token for FastMCP)
 ```
 
 ---
 
 ### Step 1: Choose Your Active Persona
-- Located at the top of the **💬 Operations Copilot** tab.
-- **Analyst**: Use for all reporting, exploratory questions, and graph traversals. (Safe mode; write actions are blocked).
+- Located at the top of the **💬 Copilot Chat** tab.
+- **Analyst**: Use for analytical reporting, exploratory questions, and graph traversals. (Safe mode; write actions are blocked).
 - **Operations Manager**: Use when evaluating operational remediation, creating compensation vouchers, or executing policies.
 
 ### Step 2: Ask Questions or Test Queries
-- Type your question in the input box, or click any pre-configured query from the **Starter Examples** below the chat box.
+- Type your question in the input box, or click any pre-configured query from the **Starter Queries** right below the chat box.
 - The **LangGraph Supervisor** automatically parses the user intent and fans out to the appropriate specialist agent (SQL, Graph, RAG, or Policy Proposer).
 
 ### Step 3: Inspect the Real-Time Trace Drawer
-- On the right side of the **Operations Copilot** tab, you can expand the three collapsible drawers:
-  - **Generated SQL Query**: See the exact sanitized PostgreSQL query executed.
-  - **Graph Cypher Pattern**: See the generated Neo4j graph traversal match pattern.
-  - **Retrieved Policy Documents**: See the retrieved RAG policy passages and citations.
+- On the right side of the **Copilot Chat** tab, you can expand the three collapsible drawers:
+  - **Generated SQL Query**: Inspect the exact sanitized PostgreSQL query executed.
+  - **Graph Cypher Pattern**: Inspect the generated Neo4j graph traversal match pattern.
+  - **Retrieved Policy Documents**: Inspect the retrieved RAG policy passages and citations.
 
 ### Step 4: Test Human-in-the-Loop Actions
-- Switch to **Operations Manager**.
+- Switch persona dropdown to **Operations Manager**.
 - Submit an operational remediation query such as:
   > *"Identify delivered orders delayed by more than 15 days in Rio de Janeiro and propose late compensation vouchers."*
 - Notice how execution pauses: an **Approval Card** appears below the chat with candidate count and total compensation amount.
 - Click **Approve Batch** to mint an HMAC token and execute via FastMCP, or **Reject Batch** to safely dismiss the proposal.
 
 ### Step 5: Explore the Schema & Policies Tabs
-- **🗄️ Database Schema & Ontology Explorer**: Use the search bar to find any table, column, business metric, or graph relationship.
-- **📜 SLA & Compensation Policies**: Review the business rules, delay tiers, financial ceilings, and cryptographic validation specs.
+- **🗄️ Database Schema**: Use the search bar to find any table, column, business metric, or graph relationship.
+- **📜 SLA Policies**: Review the business rules, delay tiers, financial ceilings, and cryptographic validation specs.
 """
 
 
@@ -295,20 +314,20 @@ def get_playbook_markdown(category_name: str) -> str:
         return "No queries found for this category."
 
     lines = [
-        f"### {category_name}",
+        f"**Category: {category_name}**",
         "",
-        "Copy any query below and paste it into the **💬 Operations Copilot** tab to see OntoAgent in action:",
+        "Copy any query below and test it in the **💬 Copilot Chat** tab:",
         "",
     ]
 
     for idx, item in enumerate(items, 1):
         lines.extend([
-            f"#### {idx}. {item['query']}",
+            f"### {idx}. {item['query']}",
             f"- **Target Specialist**: {item['specialist']}",
             f"- **Required Role**: `{item['role']}`",
-            f"- **Data Source**: {item['tables']}",
+            f"- **Data Source**: `{item['tables']}`",
             f"- **Business Purpose**: {item['description']}",
-            f"```text\n{item['query']}\n```",
+            f"> 💬 **Query to Run**:\n> ```{item['query']}```",
             "",
         ])
 
