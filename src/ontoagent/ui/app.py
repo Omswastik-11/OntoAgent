@@ -256,9 +256,7 @@ def create_ui() -> gr.Blocks:
         with gr.Tabs():
             with gr.Tab("💬 Copilot Chat"):
                 gr.Markdown(
-                    """<div style="background-color: #f0f7ff; border: 1px solid #cce3fd; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <strong>💡 New to OntoAgent?</strong> If you want to know how to use the system, explore user roles (<strong>Analyst (Read-Only)</strong> vs <strong>Operations Manager (Action-Authorized)</strong>), understand the multi-modal database architecture, or find sample queries to test, please visit the <strong>🧭 Guide & Playbook</strong> tab.
-                    </div>"""
+                    "> 💡 **New to OntoAgent?** If you want to know how to use the system, explore user roles (**Analyst [Read-Only]** vs **Operations Manager [Action-Authorized]**), understand the multi-modal database architecture (Postgres, Neo4j, Vector), or find ready-to-run queries, visit the **🧭 Guide & Playbook** tab."
                 )
                 with gr.Row():
                     with gr.Column(scale=3):
