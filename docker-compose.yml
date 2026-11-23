@@ -34,6 +34,27 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ontoagent_app
+    ports:
+      - "7860:7860"
+      - "8000:8000"
+    environment:
+      - ONTOAGENT_POSTGRES_HOST=postgres
+      - ONTOAGENT_POSTGRES_PORT=5432
+      - ONTOAGENT_NEO4J_URI=bolt://neo4j:7687
+      - ONTOAGENT_NEO4J_PASSWORD=ontoagent_neo4j_password
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   neo4j_data:
