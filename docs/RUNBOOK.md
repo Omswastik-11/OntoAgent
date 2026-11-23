@@ -58,6 +58,19 @@ python -m ontoagent.ui.app
 ```
 Access the console at [http://localhost:7860](http://localhost:7860).
 
+### 3.3 Cloud Platform Deployment (Railway, Render, Supabase)
+For cloud-hosted infrastructure without managing physical VMs:
+1. **Managed PostgreSQL**: Provision a free instance on **Supabase** with the `pgvector` extension enabled.
+2. **Managed Graph**: Provision a free **Neo4j AuraDB** cloud instance (`neo4j+s://...`).
+3. **Application Hosting (Railway / Render)**: Connect the GitHub repository `Omswastik-11/OntoAgent`. The platform automatically builds and executes the root `Dockerfile`. Set the following environment variables in your platform dashboard:
+   - `PORT`: `7860` (or platform default)
+   - `GEMINI_API_KEY`: `<your_api_key>`
+   - `ONTOAGENT_POSTGRES_HOST`: `db.<project-ref>.supabase.co`
+   - `ONTOAGENT_POSTGRES_PASSWORD`: `<supabase_password>`
+   - `ONTOAGENT_NEO4J_URI`: `neo4j+s://<aura_instance>.databases.neo4j.io`
+   - `ONTOAGENT_NEO4J_PASSWORD`: `<aura_password>`
+4. **Live Interview Sharing**: Run `python -m ontoagent.ui.app --share` to generate an instant 72-hour public HTTPS tunnel for remote demonstrations.
+
 ---
 
 ## 4. Health Checks & Diagnostics

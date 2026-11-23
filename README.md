@@ -181,11 +181,15 @@ make verify-fast
 ### 6. Interactive Interfaces
 
 #### Gradio Operations Console (Web UI)
-Launch the full web console featuring role switching (`analyst` vs. `ops_manager`), conversational analytics, query inspection, and human-in-the-loop action approval:
+Launch the comprehensive enterprise web console:
 ```bash
 python -m ontoagent.ui.app
 ```
-Access the console at [http://localhost:7860](http://localhost:7860).
+Access the console at [http://localhost:7860](http://localhost:7860). The interface features 4 dedicated operational views:
+- **💬 Copilot Chat**: Multi-turn grounded analytics, persona switching (`analyst` vs. `ops_manager`), real-time trace drawer (generated SQL, Cypher patterns, retrieved policy chunks), and interactive Human-in-the-Loop action approvals.
+- **🧭 Guide & Playbook**: Complete architectural reference explaining user roles and RBAC security boundaries, multi-modal database topology, step-by-step navigation workflows, and an interactive query catalog with 15+ ready-to-run prompts.
+- **🗄️ Database Schema**: Interactive relational data model browser (`analytics` star schema), column-level inspector, Neo4j graph relationships, canonical business metrics dictionary, and category taxonomy search.
+- **📜 SLA Policies**: Operational SLA matrix (`Tier LATE_7`, `Tier LATE_15`, `Tier UNDELIVERED_10`), financial caps, and cryptographic verification rules.
 
 #### FastAPI REST Server
 Launch the REST orchestrator providing API endpoints for `/v1/health`, `/v1/ontology`, `/v1/chat`, and `/v1/threads/{thread_id}/approval`:
@@ -199,6 +203,29 @@ Run a multi-turn chat session directly in your shell:
 ```bash
 python -m ontoagent.cli
 ```
+
+---
+
+### 7. Deployment & Cloud Hosting
+
+OntoAgent supports multiple deployment models from single-command containerization to managed cloud infrastructure:
+
+- **Single-Command Docker Deployment**:
+  ```bash
+  docker compose up -d --build
+  ```
+  Launches PostgreSQL 16 (pgvector), Neo4j 5.x, and the OntoAgent application container together.
+
+- **Instant Live Share for Demos & Interviews**:
+  ```bash
+  python -m ontoagent.ui.app --share
+  ```
+  Generates an instant public HTTPS link (`https://xxxx.gradio.live`) to test the live console on any device without cloud setup.
+
+- **Cloud Platform Deployment (Railway / Render / Supabase)**:
+  - **Relational & Vector DB**: Managed PostgreSQL 16 with pgvector on [Supabase](https://supabase.com).
+  - **Knowledge Graph**: Free managed graph instance on [Neo4j AuraDB](https://neo4j.com/cloud/platform/aura-graph-database/).
+  - **Web Application & API**: Deploy directly from the GitHub repository (`Omswastik-11/OntoAgent`) to **Railway** or **Render** using the root `Dockerfile`. Detailed cloud configurations are documented in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ---
 
@@ -216,6 +243,8 @@ python -m ontoagent.cli
 
 ```
 OntoAgent/
+├── Dockerfile                   # Multi-stage production container build (Python 3.12-slim)
+├── docker-compose.yml           # Multi-service stack (PostgreSQL + pgvector, Neo4j, App)
 ├── Makefile                     # Make automation targets (data-build, verify, test)
 ├── make.bat                     # Windows make wrapper
 ├── pyproject.toml               # Package dependencies & build configuration
@@ -232,6 +261,9 @@ OntoAgent/
 ├── src/ontoagent/               # Application source code
 │   ├── api/                     # FastAPI orchestrator, schemas, and auth middleware
 │   ├── ui/                      # Gradio interactive operations console
+│   │   ├── app.py               # Web console layout, persona switching, and HITL gate
+│   │   ├── guide_view.py        # System guide, roles, architecture diagrams & query playbook
+│   │   └── schema_view.py       # Relational schema inspector, graph topology & metrics catalog
 │   ├── config.py                # Pydantic v2 settings & feature flags
 │   ├── llm.py                   # LLM provider factory (Gemini, Groq, FakeChatModel)
 │   ├── ontology/                # Schema models, loaders, and prompt builders
