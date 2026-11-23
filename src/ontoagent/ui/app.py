@@ -20,6 +20,24 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+# Windows 11 Smart App Control (SAC) / WDAC Code Integrity compatibility
+try:
+    import numpy.random  # noqa: F401
+except (ImportError, OSError) as _err:
+    if "Application Control" in str(_err) or "DLL load failed" in str(_err):
+        import types
+        try:
+            import numpy
+            _stub = types.ModuleType("numpy.random")
+            _stub.Generator = type("Generator", (), {})
+            _stub.BitGenerator = type("BitGenerator", (), {})
+            _stub.RandomState = type("RandomState", (), {})
+            _stub.default_rng = lambda *a, **kw: _stub.Generator()
+            sys.modules["numpy.random"] = _stub
+            numpy.random = _stub
+        except Exception:
+            pass
+
 import gradio as gr
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
