@@ -45,6 +45,14 @@ from langgraph.types import Command
 from ontoagent.config import get_settings
 from ontoagent.graph.builder import build_graph
 from ontoagent.llm import extract_text_content
+from ontoagent.ui.guide_view import (
+    COPILOT_STARTER_EXAMPLES,
+    QUERY_CATALOG,
+    get_database_architecture_markdown,
+    get_navigation_guide_markdown,
+    get_playbook_markdown,
+    get_roles_markdown,
+)
 from ontoagent.ui.schema_view import (
     get_category_groups_markdown,
     get_entities_overview_markdown,
@@ -275,6 +283,12 @@ def create_ui() -> gr.Blocks:
                             )
                             submit_btn = gr.Button("Send", variant="primary", scale=1)
 
+                        gr.Examples(
+                            examples=COPILOT_STARTER_EXAMPLES,
+                            inputs=query_input,
+                            label="💡 Starter Queries (Click any query to populate)",
+                        )
+
                         # Approval Box (hidden unless approval is requested)
                         with gr.Group():
                             approval_markdown = gr.Markdown("No pending operational actions.")
@@ -365,6 +379,35 @@ def create_ui() -> gr.Blocks:
                     inputs=[persona_dropdown, thread_id_box, proposed_action_state, chatbot],
                     outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
                 )
+
+            with gr.Tab("🧭 Project Guide & Query Playbook"):
+                gr.Markdown(
+                    """## 🧭 OntoAgent Architectural Guide & Query Playbook
+Complete reference to understanding user roles, security guardrails, multi-modal database architecture, sample queries, and navigation workflows."""
+                )
+                with gr.Accordion("👥 Project Roles & Security Architecture", open=True):
+                    gr.Markdown(get_roles_markdown())
+
+                with gr.Accordion("🗄️ Multi-Modal Database Architecture (Postgres, Neo4j, Vector)", open=True):
+                    gr.Markdown(get_database_architecture_markdown())
+
+                with gr.Accordion("🧭 How to Navigate the Project", open=True):
+                    gr.Markdown(get_navigation_guide_markdown())
+
+                with gr.Accordion("📖 What to Query: Interactive Query Playbook", open=True):
+                    playbook_category_select = gr.Dropdown(
+                        label="Select Query Category",
+                        choices=list(QUERY_CATALOG.keys()),
+                        value="📊 SQL & Analytics (PostgreSQL)",
+                        interactive=True,
+                    )
+                    playbook_content_box = gr.Markdown(get_playbook_markdown("📊 SQL & Analytics (PostgreSQL)"))
+
+                    playbook_category_select.change(
+                        fn=get_playbook_markdown,
+                        inputs=[playbook_category_select],
+                        outputs=[playbook_content_box],
+                    )
 
             with gr.Tab("🗄️ Database Schema & Ontology Explorer"):
                 gr.Markdown(
