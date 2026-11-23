@@ -45,6 +45,15 @@ from langgraph.types import Command
 from ontoagent.config import get_settings
 from ontoagent.graph.builder import build_graph
 from ontoagent.llm import extract_text_content
+from ontoagent.ui.schema_view import (
+    get_category_groups_markdown,
+    get_entities_overview_markdown,
+    get_entity_detail_markdown,
+    get_graph_topology_markdown,
+    get_metrics_catalog_markdown,
+    get_raw_schema_json,
+    search_schema,
+)
 
 # Role configuration
 ROLES = {
@@ -236,124 +245,222 @@ def create_ui() -> gr.Blocks:
 """
         )
 
-        with gr.Row():
-            with gr.Column(scale=3):
+        with gr.Tabs():
+            with gr.Tab("💬 Operations Copilot"):
                 with gr.Row():
-                    persona_dropdown = gr.Dropdown(
-                        label="Active Persona",
-                        choices=["Analyst", "Operations Manager"],
-                        value="Analyst",
-                        interactive=True,
+                    with gr.Column(scale=3):
+                        with gr.Row():
+                            persona_dropdown = gr.Dropdown(
+                                label="Active Persona",
+                                choices=["Analyst", "Operations Manager"],
+                                value="Analyst",
+                                interactive=True,
+                            )
+                            thread_id_box = gr.Textbox(
+                                label="Thread ID",
+                                value="",
+                                interactive=False,
+                            )
+
+                        chatbot = gr.Chatbot(
+                            label="Operations Conversation",
+                            height=500,
+                        )
+
+                        with gr.Row():
+                            query_input = gr.Textbox(
+                                label="Enter question or operational request",
+                                placeholder="e.g. Compare the average review score of late versus on-time delivered orders.",
+                                scale=4,
+                            )
+                            submit_btn = gr.Button("Send", variant="primary", scale=1)
+
+                        # Approval Box (hidden unless approval is requested)
+                        with gr.Group():
+                            approval_markdown = gr.Markdown("No pending operational actions.")
+                            with gr.Row():
+                                approve_btn = gr.Button("Approve Batch", variant="primary", visible=False)
+                                reject_btn = gr.Button("Reject Batch", variant="stop", visible=False)
+
+                    with gr.Column(scale=2):
+                        gr.Markdown("### Operational Trace Drawer")
+                        with gr.Accordion("Generated SQL Query", open=True):
+                            sql_display = gr.Markdown("No SQL queries generated yet.")
+                        with gr.Accordion("Graph Cypher Pattern", open=False):
+                            cypher_display = gr.Markdown("No Cypher queries generated yet.")
+                        with gr.Accordion("Retrieved Policy Documents", open=False):
+                            rag_display = gr.Markdown("No policy documentation retrieved yet.")
+
+                # Hidden state holders
+                proposed_action_state = gr.State({})
+                is_interrupted_state = gr.State(False)
+
+                # Wire query submission
+                async def on_submit(msg, persona, thread, history):
+                    hist, th, sql, cyp, rag, prop, is_int = await submit_query(msg, persona, thread, history)
+                    batch_items = prop.get("items", [])
+                    batch_id = prop.get("action_id") or prop.get("batch_id", "")
+                    app_text = (
+                        f"### 🛡️ Action Approval Required ({persona})\n"
+                        f"- **Tool**: `{prop.get('tool')}`\n"
+                        f"- **Batch ID**: `{batch_id}`\n"
+                        f"- **Orders Count**: {len(batch_items)} eligible\n"
+                        f"- **Total Compensation**: R$ {prop.get('total')}\n"
+                        f"- **Status**: Paused at LangGraph interrupt. FastMCP execution pending."
+                        if is_int else "No pending operational actions."
                     )
-                    thread_id_box = gr.Textbox(
-                        label="Thread ID",
-                        value="",
-                        interactive=False,
+                    return (
+                        hist, th, sql, cyp, rag, prop, is_int,
+                        app_text,
+                        gr.update(visible=is_int),
+                        gr.update(visible=is_int),
+                        "",
                     )
 
-                chatbot = gr.Chatbot(
-                    label="Operations Conversation",
-                    height=500,
+                submit_btn.click(
+                    fn=on_submit,
+                    inputs=[query_input, persona_dropdown, thread_id_box, chatbot],
+                    outputs=[
+                        chatbot, thread_id_box, sql_display, cypher_display, rag_display,
+                        proposed_action_state, is_interrupted_state,
+                        approval_markdown, approve_btn, reject_btn, query_input
+                    ],
+                )
+                query_input.submit(
+                    fn=on_submit,
+                    inputs=[query_input, persona_dropdown, thread_id_box, chatbot],
+                    outputs=[
+                        chatbot, thread_id_box, sql_display, cypher_display, rag_display,
+                        proposed_action_state, is_interrupted_state,
+                        approval_markdown, approve_btn, reject_btn, query_input
+                    ],
                 )
 
+                # Wire approve button
+                async def on_approve(persona, thread, prop, history):
+                    hist, status_text, new_prop, new_int = await execute_approval_decision(True, persona, thread, prop, history)
+                    return (
+                        hist, status_text, new_prop, new_int,
+                        gr.update(visible=new_int),
+                        gr.update(visible=new_int),
+                    )
+
+                approve_btn.click(
+                    fn=on_approve,
+                    inputs=[persona_dropdown, thread_id_box, proposed_action_state, chatbot],
+                    outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
+                )
+
+                # Wire reject button
+                async def on_reject(persona, thread, prop, history):
+                    hist, status_text, new_prop, new_int = await execute_approval_decision(False, persona, thread, prop, history)
+                    return (
+                        hist, status_text, new_prop, new_int,
+                        gr.update(visible=new_int),
+                        gr.update(visible=new_int),
+                    )
+
+                reject_btn.click(
+                    fn=on_reject,
+                    inputs=[persona_dropdown, thread_id_box, proposed_action_state, chatbot],
+                    outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
+                )
+
+            with gr.Tab("🗄️ Database Schema & Ontology Explorer"):
+                gr.Markdown(
+                    """## 📚 Enterprise Data Model & Ontology Explorer
+Inspect the underlying PostgreSQL relational tables (`analytics` schema), Neo4j knowledge graph topology, canonical business metric formulas, and category groupings. Use the search bar below to quickly find any table, column, or metric."""
+                )
                 with gr.Row():
-                    query_input = gr.Textbox(
-                        label="Enter question or operational request",
-                        placeholder="e.g. Compare the average review score of late versus on-time delivered orders.",
+                    schema_search_input = gr.Textbox(
+                        label="Search Schema, Columns, or Metrics",
+                        placeholder="Search for a term (e.g. late, freight, customer, seller, delay, review, gmv)...",
                         scale=4,
                     )
-                    submit_btn = gr.Button("Send", variant="primary", scale=1)
+                    schema_search_btn = gr.Button("Search", variant="primary", scale=1)
+                    schema_reset_btn = gr.Button("Reset View", scale=1)
 
-                # Approval Box (hidden unless approval is requested)
-                with gr.Group():
-                    approval_markdown = gr.Markdown("No pending operational actions.")
-                    with gr.Row():
-                        approve_btn = gr.Button("Approve Batch", variant="primary", visible=False)
-                        reject_btn = gr.Button("Reject Batch", variant="stop", visible=False)
+                search_output_box = gr.Markdown(get_entities_overview_markdown())
 
-            with gr.Column(scale=2):
-                gr.Markdown("### Operational Trace Drawer")
-                with gr.Accordion("Generated SQL Query", open=True):
-                    sql_display = gr.Markdown("No SQL queries generated yet.")
-                with gr.Accordion("Graph Cypher Pattern", open=False):
-                    cypher_display = gr.Markdown("No Cypher queries generated yet.")
-                with gr.Accordion("Retrieved Policy Documents", open=False):
-                    rag_display = gr.Markdown("No policy documentation retrieved yet.")
+                with gr.Accordion("🔍 Detailed Entity / Table Column Inspector", open=True):
+                    entity_select = gr.Dropdown(
+                        label="Select Entity / Table",
+                        choices=[
+                            "Order", "OrderItem", "Customer", "Seller", "Product",
+                            "Review", "Payment", "StateRegion", "Shipment", "Category", "State"
+                        ],
+                        value="Order",
+                        interactive=True,
+                    )
+                    entity_detail_box = gr.Markdown(get_entity_detail_markdown("Order"))
 
-        # Hidden state holders
-        proposed_action_state = gr.State({})
-        is_interrupted_state = gr.State(False)
+                with gr.Accordion("🕸️ Neo4j Knowledge Graph Topology", open=False):
+                    gr.Markdown(get_graph_topology_markdown())
 
-        # Wire query submission
-        async def on_submit(msg, persona, thread, history):
-            hist, th, sql, cyp, rag, prop, is_int = await submit_query(msg, persona, thread, history)
-            batch_items = prop.get("items", [])
-            batch_id = prop.get("action_id") or prop.get("batch_id", "")
-            app_text = (
-                f"### 🛡️ Action Approval Required ({persona})\n"
-                f"- **Tool**: `{prop.get('tool')}`\n"
-                f"- **Batch ID**: `{batch_id}`\n"
-                f"- **Orders Count**: {len(batch_items)} eligible\n"
-                f"- **Total Compensation**: R$ {prop.get('total')}\n"
-                f"- **Status**: Paused at LangGraph interrupt. FastMCP execution pending."
-                if is_int else "No pending operational actions."
-            )
-            return (
-                hist, th, sql, cyp, rag, prop, is_int,
-                app_text,
-                gr.update(visible=is_int),
-                gr.update(visible=is_int),
-                "",
-            )
+                with gr.Accordion("📊 Business Metrics Catalog & Formulas", open=False):
+                    gr.Markdown(get_metrics_catalog_markdown())
 
-        submit_btn.click(
-            fn=on_submit,
-            inputs=[query_input, persona_dropdown, thread_id_box, chatbot],
-            outputs=[
-                chatbot, thread_id_box, sql_display, cypher_display, rag_display,
-                proposed_action_state, is_interrupted_state,
-                approval_markdown, approve_btn, reject_btn, query_input
-            ],
-        )
-        query_input.submit(
-            fn=on_submit,
-            inputs=[query_input, persona_dropdown, thread_id_box, chatbot],
-            outputs=[
-                chatbot, thread_id_box, sql_display, cypher_display, rag_display,
-                proposed_action_state, is_interrupted_state,
-                approval_markdown, approve_btn, reject_btn, query_input
-            ],
-        )
+                with gr.Accordion("🏷️ Product Category Taxonomy & Groups", open=False):
+                    gr.Markdown(get_category_groups_markdown())
 
-        # Wire approve button
-        async def on_approve(persona, thread, prop, history):
-            hist, status_text, new_prop, new_int = await execute_approval_decision(True, persona, thread, prop, history)
-            return (
-                hist, status_text, new_prop, new_int,
-                gr.update(visible=new_int),
-                gr.update(visible=new_int),
-            )
+                with gr.Accordion("📄 Raw Schema & Domain Contract (JSON)", open=False):
+                    gr.Code(
+                        value=get_raw_schema_json(),
+                        language="json",
+                        label="ontology.yaml as JSON",
+                    )
 
-        approve_btn.click(
-            fn=on_approve,
-            inputs=[persona_dropdown, thread_id_box, proposed_action_state, chatbot],
-            outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
-        )
+                entity_select.change(
+                    fn=get_entity_detail_markdown,
+                    inputs=[entity_select],
+                    outputs=[entity_detail_box],
+                )
+                schema_search_btn.click(
+                    fn=search_schema,
+                    inputs=[schema_search_input],
+                    outputs=[search_output_box],
+                )
+                schema_search_input.submit(
+                    fn=search_schema,
+                    inputs=[schema_search_input],
+                    outputs=[search_output_box],
+                )
+                schema_reset_btn.click(
+                    fn=lambda: ("", get_entities_overview_markdown()),
+                    outputs=[schema_search_input, search_output_box],
+                )
 
-        # Wire reject button
-        async def on_reject(persona, thread, prop, history):
-            hist, status_text, new_prop, new_int = await execute_approval_decision(False, persona, thread, prop, history)
-            return (
-                hist, status_text, new_prop, new_int,
-                gr.update(visible=new_int),
-                gr.update(visible=new_int),
-            )
-
-        reject_btn.click(
-            fn=on_reject,
-            inputs=[persona_dropdown, thread_id_box, proposed_action_state, chatbot],
-            outputs=[chatbot, approval_markdown, proposed_action_state, is_interrupted_state, approve_btn, reject_btn],
-        )
+            with gr.Tab("📜 SLA & Compensation Policies"):
+                gr.Markdown(
+                    """## 📜 Operational SLA & Compensation Rules
+Standard compensation rules for customer delivery delays and undelivered orders on the marketplace.
+All actions require explicit human review and authorization before execution via FastMCP."""
+                )
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown(
+                            """### 🎯 Automated Compensation Tiers
+- **Tier `LATE_7` (7 to 14 days delay)**:
+  - **Condition**: Delivered orders where `delay_days >= 7` and `delay_days <= 14`.
+  - **Compensation**: **20%** of items total (`items_total * 0.20`).
+- **Tier `LATE_15` (15+ days delay)**:
+  - **Condition**: Delivered orders where `delay_days >= 15`.
+  - **Compensation**: **50%** of items total (`items_total * 0.50`).
+- **Tier `UNDELIVERED_10` (Unfulfilled / Lost)**:
+  - **Condition**: Undelivered orders where promised delivery date is passed by `>= 10 days`.
+  - **Compensation**: **100%** of items total + **100%** freight (`payment_total`).
+"""
+                        )
+                    with gr.Column():
+                        gr.Markdown(
+                            """### 🛡️ Safety & Financial Guardrails
+- **Goodwill Hard Cap**: Maximum refund cannot exceed **R$ 1,000.00** per order.
+- **Batch Ceiling**: No proposed batch can exceed **R$ 10,000.00** total or **25** orders.
+- **Role Isolation**: Only `ops_manager` users are authorized to propose or confirm compensation actions.
+- **Cryptographic Gate**: Every approved batch mints a single-use HMAC token checked by FastMCP to prevent replay attacks (`jti`).
+- **Communication Security**: Customer notifications are restricted to pre-approved templates (`late_apology`, `seller_probation_warning`).
+"""
+                        )
 
     return demo
 

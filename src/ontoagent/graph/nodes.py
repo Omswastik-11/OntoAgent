@@ -149,7 +149,7 @@ Role Permissions:
 - Operations Manager: Authorized to plan, initiate, and draft operational actions. When an action is requested (e.g. create/propose/draft refund or compensation batch), set wants_action=True, action_type='refund', and include a SQL subtask to fetch candidate delayed order IDs (e.g. 'Retrieve late orders including order_id, delay_days').
 
 Routing rules:
-1. SQL: Aggregates, counts, delay rates, averages, order values, list of delayed orders, metrics by category, seller, customer.
+1. SQL: Aggregates, counts, delay rates, averages, order values, list of delayed orders, metrics by category, seller, customer, or questions inquiring about the database schema, tables, entities, or columns.
 2. RAG: Policies, refund rules, SLAs, escalation procedures, thresholds.
 3. GRAPH: Multi-hop seller/customer/product network relationships, co-purchases, shared customers, and review clusters.
 4. Decision: "answer" for valid questions/plans, "clarify" if completely ambiguous, "refuse" if unauthorized, destructive, or out-of-scope.
@@ -406,6 +406,31 @@ async def synthesizer(state: AgentState) -> Dict[str, Any]:
             for c in chunks
         ]
         context_parts.append("Retrieved Policy Documentation:\n" + "\n\n".join(chunk_texts))
+
+    # Check if question is asking about database schema, tables, or ontology structure
+    q_lower = question.lower()
+    schema_keywords = {"schema", "tables", "entities", "columns", "database structure", "data model", "db schema"}
+    if any(k in q_lower for k in schema_keywords):
+        try:
+            from ontoagent.ontology.loader import load_ontology
+            onto = load_ontology()
+            schema_summary = [
+                "Domain Ontology & Database Schema Overview:",
+                "Relational Tables (PostgreSQL analytics schema):",
+            ]
+            for ent_name, ent in onto.entities.items():
+                if ent.sql_table:
+                    cols = ", ".join(f"{col} ({p.type})" for col, p in list(ent.properties.items())[:6])
+                    schema_summary.append(
+                        f"- `{ent.sql_table}` ({ent_name}): {ent.description} [Grain: {ent.grain or '1 row'}, Key: {ent.key or '-'}]. Key columns: {cols}"
+                    )
+            schema_summary.append("\nNeo4j Knowledge Graph:")
+            schema_summary.append("- Nodes: Customer, Order, Product, Seller, Review")
+            schema_summary.append("- Relationships: (:Customer)-[:PLACED]->(:Order), (:Order)-[:CONTAINS]->(:Product), (:Seller)-[:FULFILLS]->(:Order)")
+            schema_summary.append("\nCanonical Metrics: late_rate, handoff_late_rate, gmv, avg_review_score")
+            context_parts.append("\n".join(schema_summary))
+        except Exception as e:
+            logger.warning("Could not append schema context: %s", e)
 
     data_context = "\n\n".join(context_parts) if context_parts else "No specialist data retrieved."
 
